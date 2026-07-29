@@ -1,0 +1,20 @@
+import uuid
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Integer, Numeric
+from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.sql import func
+
+from app.core.db import Base
+
+
+class Index(Base):
+    __tablename__ = "indexes"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(UUID(as_uuid=True), nullable=False)
+    name = Column(Text, nullable=False)
+    slug = Column(Text, nullable=False, unique=True)
+    description = Column(Text)
+    status = Column(Text, nullable=False, default="draft")
+    created_by = Column(UUID(as_uuid=True))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now())
