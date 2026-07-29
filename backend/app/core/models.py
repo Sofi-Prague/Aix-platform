@@ -5,6 +5,15 @@ from sqlalchemy.sql import func
 
 from app.core.db import Base
 
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id = Column(UUID(as_uuid=True), nullable=False)
+    email = Column(Text, nullable=False, unique=True)
+    hashed_password = Column(Text, nullable=False)
+    role = Column(Text, nullable=False, default="author")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class Index(Base):
     __tablename__ = "indexes"
