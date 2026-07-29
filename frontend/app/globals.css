@@ -1,0 +1,39 @@
+/*
+  Design tokens — placeholders for Tuesday's design-system pass.
+  Fill these in against Volume 9 (UI Design System) once you have it in hand.
+*/
+:root {
+  --aix-color-bg: #0f1115;
+  --aix-color-surface: #171a21;
+  --aix-color-border: #2a2e38;
+  --aix-color-text: #e6e8eb;
+  --aix-color-text-muted: #9aa0ab;
+  --aix-color-accent: #4f8cff;
+
+  /* AI-suggested vs Author-authored distinction — PRD §6.2 requires this
+     everywhere AI content appears, so make it a token, not a one-off style. */
+  --aix-color-ai-suggestion-bg: #1c2333;
+  --aix-color-ai-suggestion-border: #3a4a6b;
+
+  --aix-space-xs: 4px;
+  --aix-space-sm: 8px;
+  --aix-space-md: 16px;
+  --aix-space-lg: 24px;
+  --aix-space-xl: 32px;
+
+  --aix-radius-sm: 4px;
+  --aix-radius-md: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--aix-color-bg);
+  color: var(--aix-color-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
