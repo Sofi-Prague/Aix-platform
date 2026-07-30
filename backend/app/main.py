@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -13,10 +15,18 @@ from app.modules.analytics_audit.router import router as audit_router
 
 app = FastAPI(title=settings.app_name)
 
-# Local dev only — tighten before anything beyond the pilot
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "ALLOWED_ORIGINS",
+        "http://localhost:3000",
+    ).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -34,4 +44,8 @@ app.include_router(audit_router)
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "app": settings.app_name, "env": settings.environment}
+    return {
+        "status": "ok",
+        "app": settings.app_name,
+        "env": settings.environment,
+    }

@@ -2,82 +2,131 @@
 
 import { useState } from "react";
 
-/**
- * Three-panel Index Builder shell (PRD §6.2):
- *   Left   — dimension/indicator tree
- *   Center — detail editor for the selected indicator
- *   Right  — AI Co-Pilot, contextual to the selected dimension
- *
- * Below tablet width this collapses to a single tab-switched panel
- * (PRD "Responsive Behavior"). That collapse isn't implemented yet —
- * this is the desktop layout to build against first.
- */
+import { Button } from "./ui/Button";
+import { StatusMessage } from "./ui/StatusMessage";
+
+type WorkspaceTab = "tree" | "detail" | "copilot";
+
 export function IndexWorkspaceShell() {
-  const [activeTab, setActiveTab] = useState<"tree" | "detail" | "copilot">("tree");
+  const [activeTab, setActiveTab] =
+    useState<WorkspaceTab>("tree");
 
   return (
-    <div style={{ display: "flex", height: "100vh" }}>
-      <Panel title="Dimensions & Indicators" className="workspace-tree">
-        <EmptyState
-          prompt="What does this index measure?"
-          hint="First-time Author empty state — feeds the AI Co-Pilot's first round of dimension suggestions (PRD §6.2)."
-        />
-      </Panel>
+    <section aria-label="Index workspace">
+      <nav
+        className="workspace-mobile-tabs"
+        aria-label="Workspace panels"
+      >
+        <Button
+          type="button"
+          variant={
+            activeTab === "tree" ? "primary" : "secondary"
+          }
+          onClick={() => setActiveTab("tree")}
+        >
+          Structure
+        </Button>
 
-      <Panel title="Detail" className="workspace-detail">
-        <p style={{ color: "var(--aix-color-text-muted)" }}>
-          Select a dimension or indicator to edit it here.
-        </p>
-      </Panel>
+        <Button
+          type="button"
+          variant={
+            activeTab === "detail" ? "primary" : "secondary"
+          }
+          onClick={() => setActiveTab("detail")}
+        >
+          Detail
+        </Button>
 
-      <Panel title="AI Co-Pilot" className="workspace-copilot" isAiRegion>
-        <p style={{ color: "var(--aix-color-text-muted)" }}>
-          Co-Pilot suggestions will appear here, visually distinct until
-          accepted (PRD §6.2 — never indistinguishable from Author content).
-        </p>
-      </Panel>
-    </div>
+        <Button
+          type="button"
+          variant={
+            activeTab === "copilot"
+              ? "primary"
+              : "secondary"
+          }
+          onClick={() => setActiveTab("copilot")}
+        >
+          AI Co-Pilot
+        </Button>
+      </nav>
+
+      <div className="workspace-layout">
+        <Panel
+          title="Dimensions & Indicators"
+          active={activeTab === "tree"}
+        >
+          <StatusMessage
+            type="empty"
+            title="What does this index measure?"
+            message="Start by defining the purpose of the index. Later, the AI Co-Pilot can suggest dimensions and indicators."
+          />
+        </Panel>
+
+        <Panel
+          title="Detail"
+          active={activeTab === "detail"}
+        >
+          <StatusMessage
+            type="empty"
+            title="Nothing selected"
+            message="Select a dimension or indicator to edit its details."
+          />
+        </Panel>
+
+        <Panel
+          title="AI Co-Pilot"
+          active={activeTab === "copilot"}
+          isAiRegion
+        >
+          <StatusMessage
+            type="empty"
+            title="No suggestions yet"
+            message="AI-generated suggestions will remain visually distinct until accepted."
+          />
+        </Panel>
+      </div>
+    </section>
   );
 }
 
 function Panel({
   title,
   children,
-  className,
+  active,
   isAiRegion = false,
 }: {
   title: string;
   children: React.ReactNode;
-  className?: string;
+  active: boolean;
   isAiRegion?: boolean;
 }) {
   return (
     <section
-      className={className}
-      // AI-generated content regions must be announced to screen readers
-      // as such (PRD "Accessibility Requirements").
-      aria-label={isAiRegion ? `${title} — AI-suggested content, not yet accepted` : title}
+      className="workspace-panel"
+      data-active={active}
+      aria-label={
+        isAiRegion
+          ? `${title} — AI-suggested content`
+          : title
+      }
       style={{
-        flex: 1,
-        borderRight: "1px solid var(--aix-color-border)",
-        padding: "var(--aix-space-md)",
-        background: isAiRegion ? "var(--aix-color-ai-suggestion-bg)" : "var(--aix-color-surface)",
-        overflowY: "auto",
+        background: isAiRegion
+          ? "var(--aix-color-ai-suggestion-bg)"
+          : undefined,
       }}
     >
-      <h2 style={{ fontSize: "14px", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--aix-color-text-muted)" }}>
+      <h2
+        style={{
+          fontSize: "14px",
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+          color: "var(--aix-color-text-muted)",
+        }}
+      >
         {title}
       </h2>
+
       {children}
     </section>
-  );
-}
-
-function EmptyState({ prompt, hint }: { prompt: string; hint: string }) {
-  return (
-    <div style={{ marginTop: "var(--aix-space-lg)" }}>
-      <p style={{ fontSize: "16px" }}>{prompt}</p>
-      <p style={{ fontSize: "13px", color: "var(--aix-color-text-muted)" }}>{hint}</p>
-    </div>
   );
 }
