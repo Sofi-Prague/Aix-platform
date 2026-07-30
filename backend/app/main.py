@@ -42,10 +42,19 @@ app.include_router(notifications_router)
 app.include_router(audit_router)
 
 
+# @app.get("/health")
+# def health():
+#     return {
+#         "status": "ok",
+#         "app": settings.app_name,
+#         "env": settings.environment,
+#     }
+
 @app.get("/health")
 def health():
     return {
         "status": "ok",
         "app": settings.app_name,
         "env": settings.environment,
+        "allowed_origins": allowed_origins,
     }
