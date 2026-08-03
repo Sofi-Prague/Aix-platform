@@ -16,6 +16,7 @@ import {
   getAccessToken,
   removeAccessToken,
 } from "../../lib/auth";
+import { IndexManager } from "../../components/IndexManager";
 
 export default function WorkspacePage() {
   const router = useRouter();
@@ -126,36 +127,10 @@ export default function WorkspacePage() {
         </Button>
       </header>
 
-      <section
-        style={{
-          padding: "var(--aix-space-md)",
-          borderBottom:
-            "1px solid var(--aix-color-border)",
-        }}
-      >
-        <h1 style={{ fontSize: "18px" }}>Your indexes</h1>
-
-        {indexes.length === 0 ? (
-          <p style={{ color: "var(--aix-color-text-muted)" }}>
-            No indexes have been created for this tenant yet.
-          </p>
-        ) : (
-          <ul>
-            {indexes.map((index) => (
-              <li key={index.id}>
-                <strong>{index.name}</strong>{" "}
-                <span
-                  style={{
-                    color: "var(--aix-color-text-muted)",
-                  }}
-                >
-                  — {index.status}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      <IndexManager
+        indexes={indexes}
+        onIndexesChange={setIndexes}
+      />
 
       <IndexWorkspaceShell />
     </main>

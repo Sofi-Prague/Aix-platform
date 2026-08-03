@@ -26,11 +26,26 @@ export type IndexRecord = {
   name: string;
   slug: string;
   description: string | null;
-  status: string;
+  status: "draft" | "published" | "archived";
   created_by: string | null;
   created_at: string;
   updated_at: string;
 };
+
+export type CreateIndexRequest = {
+  name: string;
+  slug: string;
+  description?: string | null;
+};
+
+export type UpdateIndexRequest = {
+  name?: string;
+  slug?: string;
+  description?: string | null;
+  status?: "draft" | "published" | "archived";
+};
+
+
 
 async function request<T>(
   path: string,
@@ -71,6 +86,28 @@ async function request<T>(
     throw new Error(message);
   }
 
+  if (!response.ok) {
+    let message = `Request failed with status ${response.status}`;
+
+    try {
+      const body = (await response.json()) as {
+        detail?: string;
+      };
+
+      if (body.detail) {
+        message = body.detail;
+      }
+    } catch {
+      // Keep the fallback message.
+    }
+
+    throw new Error(message);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return response.json() as Promise<T>;
 }
 
@@ -89,4 +126,35 @@ export function getCurrentUser(): Promise<User> {
 
 export function getIndexes(): Promise<IndexRecord[]> {
   return request<IndexRecord[]>("/indexes");
+}
+
+export function createIndex(
+  payload: CreateIndexRequest,
+): Promise<IndexRecord> {
+  return request<IndexRecord>("/indexes", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateIndex(
+  currentSlug: string,
+  payload: UpdateIndexRequest,
+): Promise<IndexRecord> {
+  return request<IndexRecord>(
+    `/indexes/${encodeURIComponent(currentSlug)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function deleteIndex(slug: string): Promise<void> {
+  await request<void>(
+    `/indexes/${encodeURIComponent(slug)}`,
+    {
+      method: "DELETE",
+    },
+  );
 }
