@@ -14,7 +14,9 @@ import { StatusMessage } from "./ui/StatusMessage";
 
 type IndexManagerProps = {
   indexes: IndexRecord[];
+  selectedIndex: IndexRecord | null;
   onIndexesChange: (indexes: IndexRecord[]) => void;
+  onSelectIndex: (index: IndexRecord | null) => void;
 };
 
 type EditorMode = "closed" | "create" | "edit";
@@ -30,7 +32,9 @@ function makeSlug(value: string): string {
 
 export function IndexManager({
   indexes,
+  selectedIndex,
   onIndexesChange,
+  onSelectIndex,
 }: IndexManagerProps) {
   const [mode, setMode] = useState<EditorMode>("closed");
   const [editingIndex, setEditingIndex] =
@@ -60,6 +64,7 @@ export function IndexManager({
 
   function beginCreate(): void {
     resetForm();
+    setMessage("");
     setMode("create");
   }
 
@@ -100,6 +105,7 @@ export function IndexManager({
         });
 
         onIndexesChange([created, ...indexes]);
+        onSelectIndex(created);
         setMessage(`Created "${created.name}".`);
       }
 
@@ -120,6 +126,10 @@ export function IndexManager({
           ),
         );
 
+        if (selectedIndex?.id === updated.id) {
+          onSelectIndex(updated);
+        }
+
         setMessage(`Updated "${updated.name}".`);
       }
 
@@ -135,7 +145,9 @@ export function IndexManager({
     }
   }
 
-  async function handleDelete(index: IndexRecord): Promise<void> {
+  async function handleDelete(
+    index: IndexRecord,
+  ): Promise<void> {
     const confirmed = window.confirm(
       `Delete "${index.name}"? This action cannot currently be undone.`,
     );
@@ -154,6 +166,10 @@ export function IndexManager({
       onIndexesChange(
         indexes.filter((item) => item.id !== index.id),
       );
+
+      if (selectedIndex?.id === index.id) {
+        onSelectIndex(null);
+      }
 
       if (editingIndex?.id === index.id) {
         resetForm();
@@ -190,26 +206,39 @@ export function IndexManager({
       >
         <h1
           id="index-manager-heading"
-          style={{ margin: 0, fontSize: "20px" }}
+          style={{
+            margin: 0,
+            fontSize: "20px",
+          }}
         >
           Your indexes
         </h1>
 
-        <Button type="button" onClick={beginCreate}>
+        <Button
+          type="button"
+          onClick={beginCreate}
+        >
           New index
         </Button>
       </div>
 
       {message && (
-        <StatusMessage type="success" title={message} />
+        <div style={{ marginBottom: "var(--aix-space-md)" }}>
+          <StatusMessage
+            type="success"
+            title={message}
+          />
+        </div>
       )}
 
       {error && (
-        <StatusMessage
-          type="error"
-          title="Index operation failed"
-          message={error}
-        />
+        <div style={{ marginBottom: "var(--aix-space-md)" }}>
+          <StatusMessage
+            type="error"
+            title="Index operation failed"
+            message={error}
+          />
+        </div>
       )}
 
       {mode !== "closed" && (
@@ -222,8 +251,10 @@ export function IndexManager({
             marginBlock: "var(--aix-space-lg)",
           }}
         >
-          <h2>
-            {mode === "create" ? "Create index" : "Edit index"}
+          <h2 style={{ margin: 0 }}>
+            {mode === "create"
+              ? "Create index"
+              : "Edit index"}
           </h2>
 
           <Input
@@ -244,33 +275,51 @@ export function IndexManager({
             required
             pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
             value={slug}
-            onChange={(event) => setSlug(event.target.value)}
-          />
-
-          <label htmlFor="index-description">
-            Description
-          </label>
-
-          <textarea
-            id="index-description"
-            value={description}
             onChange={(event) =>
-              setDescription(event.target.value)
+              setSlug(event.target.value)
             }
-            rows={4}
-            style={{
-              width: "100%",
-              padding: "10px 12px",
-              border:
-                "1px solid var(--aix-color-border)",
-              borderRadius: "var(--aix-radius-sm)",
-              font: "inherit",
-            }}
           />
+
+          <div
+            style={{
+              display: "grid",
+              gap: "var(--aix-space-sm)",
+            }}
+          >
+            <label htmlFor="index-description">
+              Description
+            </label>
+
+            <textarea
+              id="index-description"
+              value={description}
+              onChange={(event) =>
+                setDescription(event.target.value)
+              }
+              rows={4}
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                border:
+                  "1px solid var(--aix-color-border)",
+                borderRadius:
+                  "var(--aix-radius-sm)",
+                font: "inherit",
+                resize: "vertical",
+              }}
+            />
+          </div>
 
           {mode === "edit" && (
-            <>
-              <label htmlFor="index-status">Status</label>
+            <div
+              style={{
+                display: "grid",
+                gap: "var(--aix-space-sm)",
+              }}
+            >
+              <label htmlFor="index-status">
+                Status
+              </label>
 
               <select
                 id="index-status"
@@ -284,22 +333,41 @@ export function IndexManager({
                 style={{
                   minHeight: "42px",
                   padding: "10px 12px",
+                  border:
+                    "1px solid var(--aix-color-border)",
+                  borderRadius:
+                    "var(--aix-radius-sm)",
+                  background:
+                    "var(--aix-color-surface)",
+                  color:
+                    "var(--aix-color-text)",
+                  font: "inherit",
                 }}
               >
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-                <option value="archived">Archived</option>
+                <option value="draft">
+                  Draft
+                </option>
+                <option value="published">
+                  Published
+                </option>
+                <option value="archived">
+                  Archived
+                </option>
               </select>
-            </>
+            </div>
           )}
 
           <div
             style={{
               display: "flex",
+              flexWrap: "wrap",
               gap: "var(--aix-space-sm)",
             }}
           >
-            <Button type="submit" isLoading={isSaving}>
+            <Button
+              type="submit"
+              isLoading={isSaving}
+            >
               {mode === "create"
                 ? "Create index"
                 : "Save changes"}
@@ -328,64 +396,113 @@ export function IndexManager({
             display: "grid",
             gap: "var(--aix-space-sm)",
             padding: 0,
+            margin: 0,
             listStyle: "none",
           }}
         >
-          {indexes.map((index) => (
-            <li
-              key={index.id}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: "var(--aix-space-md)",
-                padding: "var(--aix-space-md)",
-                border:
-                  "1px solid var(--aix-color-border)",
-                borderRadius: "var(--aix-radius-sm)",
-                background: "var(--aix-color-surface)",
-              }}
-            >
-              <div>
-                <strong>{index.name}</strong>
+          {indexes.map((index) => {
+            const isSelected =
+              selectedIndex?.id === index.id;
 
-                <p
-                  style={{
-                    margin: "4px 0 0",
-                    color: "var(--aix-color-text-muted)",
-                  }}
-                >
-                  {index.slug} · {index.status}
-                </p>
-              </div>
-
-              <div
+            return (
+              <li
+                key={index.id}
                 style={{
                   display: "flex",
-                  gap: "var(--aix-space-sm)",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "var(--aix-space-md)",
+                  padding:
+                    "var(--aix-space-md)",
+                  border: isSelected
+                    ? "2px solid var(--aix-color-primary)"
+                    : "1px solid var(--aix-color-border)",
+                  borderRadius:
+                    "var(--aix-radius-sm)",
+                  background:
+                    "var(--aix-color-surface)",
                 }}
               >
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => beginEdit(index)}
-                >
-                  Edit
-                </Button>
+                <div>
+                  <strong>{index.name}</strong>
 
-                <Button
-                  type="button"
-                  variant="danger"
-                  disabled={deletingSlug === index.slug}
-                  onClick={() => void handleDelete(index)}
+                  <p
+                    style={{
+                      margin: "4px 0 0",
+                      color:
+                        "var(--aix-color-text-muted)",
+                    }}
+                  >
+                    {index.slug} · {index.status}
+                  </p>
+
+                  {index.description && (
+                    <p
+                      style={{
+                        margin:
+                          "var(--aix-space-sm) 0 0",
+                        color:
+                          "var(--aix-color-text-muted)",
+                        maxWidth: "600px",
+                      }}
+                    >
+                      {index.description}
+                    </p>
+                  )}
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "var(--aix-space-sm)",
+                  }}
                 >
-                  {deletingSlug === index.slug
-                    ? "Deleting…"
-                    : "Delete"}
-                </Button>
-              </div>
-            </li>
-          ))}
+                  <Button
+                    type="button"
+                    variant={
+                      isSelected
+                        ? "primary"
+                        : "secondary"
+                    }
+                    onClick={() =>
+                      onSelectIndex(index)
+                    }
+                  >
+                    {isSelected
+                      ? "Selected"
+                      : "Open"}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() =>
+                      beginEdit(index)
+                    }
+                  >
+                    Edit
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="danger"
+                    disabled={
+                      deletingSlug === index.slug
+                    }
+                    onClick={() =>
+                      void handleDelete(index)
+                    }
+                  >
+                    {deletingSlug === index.slug
+                      ? "Deleting…"
+                      : "Delete"}
+                  </Button>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>

@@ -1,28 +1,37 @@
 "use client";
 
-import { Button } from "../../components/ui/Button";
-
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { IndexManager } from "../../components/IndexManager";
 import { IndexWorkspaceShell } from "../../components/IndexWorkspaceShell";
+import { Button } from "../../components/ui/Button";
+
 import {
   getCurrentUser,
   getIndexes,
-  IndexRecord,
-  User,
+  type DimensionRecord,
+  type IndexRecord,
+  type User,
 } from "../../lib/api";
+
 import {
   getAccessToken,
   removeAccessToken,
 } from "../../lib/auth";
-import { IndexManager } from "../../components/IndexManager";
 
 export default function WorkspacePage() {
   const router = useRouter();
 
   const [user, setUser] = useState<User | null>(null);
   const [indexes, setIndexes] = useState<IndexRecord[]>([]);
+
+  const [selectedIndex, setSelectedIndex] =
+    useState<IndexRecord | null>(null);
+
+  const [selectedDimension, setSelectedDimension] =
+    useState<DimensionRecord | null>(null);
+
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
@@ -44,12 +53,12 @@ export default function WorkspacePage() {
 
         setUser(currentUser);
         setIndexes(tenantIndexes);
-      } catch (error) {
+      } catch (caughtError) {
         removeAccessToken();
 
         setError(
-          error instanceof Error
-            ? error.message
+          caughtError instanceof Error
+            ? caughtError.message
             : "Unable to load the workspace.",
         );
 
@@ -64,14 +73,47 @@ export default function WorkspacePage() {
 
   function handleLogout(): void {
     removeAccessToken();
-    router.push("/login");
+    router.replace("/login");
+  }
+
+  function handleSelectIndex(
+    index: IndexRecord | null,
+  ): void {
+    setSelectedIndex(index);
+    setSelectedDimension(null);
+  }
+
+  function handleIndexesChange(
+    updatedIndexes: IndexRecord[],
+  ): void {
+    setIndexes(updatedIndexes);
+
+    if (!selectedIndex) {
+      return;
+    }
+
+    const updatedSelectedIndex =
+      updatedIndexes.find(
+        (index) => index.id === selectedIndex.id,
+      ) ?? null;
+
+    setSelectedIndex(updatedSelectedIndex);
+
+    if (!updatedSelectedIndex) {
+      setSelectedDimension(null);
+    }
   }
 
   if (isLoading) {
     return (
       <main
         aria-live="polite"
-        style={{ padding: "var(--aix-space-xl)" }}
+        style={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          padding: "var(--aix-space-xl)",
+        }}
       >
         <p>Loading workspace…</p>
       </main>
@@ -80,8 +122,20 @@ export default function WorkspacePage() {
 
   if (error) {
     return (
-      <main style={{ padding: "var(--aix-space-xl)" }}>
+      <main
+        style={{
+          padding: "var(--aix-space-xl)",
+        }}
+      >
         <p role="alert">{error}</p>
+
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => router.replace("/login")}
+        >
+          Return to login
+        </Button>
       </main>
     );
   }
@@ -98,8 +152,9 @@ export default function WorkspacePage() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          flexWrap: "wrap",
           gap: "var(--aix-space-md)",
-          padding: "0 var(--aix-space-lg)",
+          padding: "var(--aix-space-md) var(--aix-space-lg)",
           borderBottom:
             "1px solid var(--aix-color-border)",
           background: "var(--aix-color-surface)",
@@ -129,10 +184,16 @@ export default function WorkspacePage() {
 
       <IndexManager
         indexes={indexes}
-        onIndexesChange={setIndexes}
+        selectedIndex={selectedIndex}
+        onIndexesChange={handleIndexesChange}
+        onSelectIndex={handleSelectIndex}
       />
 
-      <IndexWorkspaceShell />
+      <IndexWorkspaceShell
+        selectedIndex={selectedIndex}
+        selectedDimension={selectedDimension}
+        onSelectDimension={setSelectedDimension}
+      />
     </main>
   );
 }

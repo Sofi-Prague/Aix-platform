@@ -1,6 +1,6 @@
 import uuid
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Integer, Numeric
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Integer
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 
 from app.core.db import Base
@@ -27,3 +27,25 @@ class Index(Base):
     created_by = Column(UUID(as_uuid=True))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class Dimension(Base):
+    __tablename__ = "dimensions"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+    index_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("indexes.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    name = Column(Text, nullable=False)
+    description = Column(Text, nullable=True)
+    order_position = Column(Integer, nullable=False, default=0)
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )

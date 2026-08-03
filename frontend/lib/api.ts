@@ -45,7 +45,26 @@ export type UpdateIndexRequest = {
   status?: "draft" | "published" | "archived";
 };
 
+export type DimensionRecord = {
+  id: string;
+  index_id: string;
+  name: string;
+  description: string | null;
+  order_position: number;
+  created_at: string;
+};
 
+export type CreateDimensionRequest = {
+  name: string;
+  description?: string | null;
+  order_position?: number;
+};
+
+export type UpdateDimensionRequest = {
+  name?: string;
+  description?: string | null;
+  order_position?: number;
+};
 
 async function request<T>(
   path: string,
@@ -153,6 +172,53 @@ export function updateIndex(
 export async function deleteIndex(slug: string): Promise<void> {
   await request<void>(
     `/indexes/${encodeURIComponent(slug)}`,
+    {
+      method: "DELETE",
+    },
+  );
+}
+
+export function getDimensions(
+  indexSlug: string,
+): Promise<DimensionRecord[]> {
+  return request<DimensionRecord[]>(
+    `/methodology/indexes/${encodeURIComponent(indexSlug)}/dimensions`,
+  );
+}
+
+export function createDimension(
+  indexSlug: string,
+  payload: CreateDimensionRequest,
+): Promise<DimensionRecord> {
+  return request<DimensionRecord>(
+    `/methodology/indexes/${encodeURIComponent(indexSlug)}/dimensions`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export function updateDimension(
+  indexSlug: string,
+  dimensionId: string,
+  payload: UpdateDimensionRequest,
+): Promise<DimensionRecord> {
+  return request<DimensionRecord>(
+    `/methodology/indexes/${encodeURIComponent(indexSlug)}/dimensions/${dimensionId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function deleteDimension(
+  indexSlug: string,
+  dimensionId: string,
+): Promise<void> {
+  await request<void>(
+    `/methodology/indexes/${encodeURIComponent(indexSlug)}/dimensions/${dimensionId}`,
     {
       method: "DELETE",
     },

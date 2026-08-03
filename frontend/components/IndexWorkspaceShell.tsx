@@ -1,15 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
+import type {
+  DimensionRecord,
+  IndexRecord,
+} from "../lib/api";
+import { DimensionManager } from "./DimensionManager";
 import { Button } from "./ui/Button";
 import { StatusMessage } from "./ui/StatusMessage";
 
 type WorkspaceTab = "tree" | "detail" | "copilot";
 
-export function IndexWorkspaceShell() {
+type IndexWorkspaceShellProps = {
+  selectedIndex: IndexRecord | null;
+  selectedDimension: DimensionRecord | null;
+  onSelectDimension: (
+    dimension: DimensionRecord | null,
+  ) => void;
+};
+
+export function IndexWorkspaceShell({
+  selectedIndex,
+  selectedDimension,
+  onSelectDimension,
+}: IndexWorkspaceShellProps) {
   const [activeTab, setActiveTab] =
     useState<WorkspaceTab>("tree");
+
+  const handleSelectDimension = useCallback(
+    (dimension: DimensionRecord | null): void => {
+      onSelectDimension(dimension);
+
+      if (dimension) {
+        setActiveTab("detail");
+      }
+    },
+    [onSelectDimension],
+  );
 
   return (
     <section aria-label="Index workspace">
@@ -20,7 +48,9 @@ export function IndexWorkspaceShell() {
         <Button
           type="button"
           variant={
-            activeTab === "tree" ? "primary" : "secondary"
+            activeTab === "tree"
+              ? "primary"
+              : "secondary"
           }
           onClick={() => setActiveTab("tree")}
         >
@@ -30,7 +60,9 @@ export function IndexWorkspaceShell() {
         <Button
           type="button"
           variant={
-            activeTab === "detail" ? "primary" : "secondary"
+            activeTab === "detail"
+              ? "primary"
+              : "secondary"
           }
           onClick={() => setActiveTab("detail")}
         >
@@ -55,10 +87,10 @@ export function IndexWorkspaceShell() {
           title="Dimensions & Indicators"
           active={activeTab === "tree"}
         >
-          <StatusMessage
-            type="empty"
-            title="What does this index measure?"
-            message="Start by defining the purpose of the index. Later, the AI Co-Pilot can suggest dimensions and indicators."
+          <DimensionManager
+            selectedIndex={selectedIndex}
+            selectedDimension={selectedDimension}
+            onSelectDimension={handleSelectDimension}
           />
         </Panel>
 
@@ -66,11 +98,81 @@ export function IndexWorkspaceShell() {
           title="Detail"
           active={activeTab === "detail"}
         >
-          <StatusMessage
-            type="empty"
-            title="Nothing selected"
-            message="Select a dimension or indicator to edit its details."
-          />
+          {!selectedIndex ? (
+            <StatusMessage
+              type="empty"
+              title="No index selected"
+              message="Open an index before viewing methodology details."
+            />
+          ) : selectedDimension ? (
+            <div>
+              <h3
+                style={{
+                  marginTop: 0,
+                  marginBottom: "var(--aix-space-md)",
+                }}
+              >
+                {selectedDimension.name}
+              </h3>
+
+              <div
+                style={{
+                  display: "grid",
+                  gap: "var(--aix-space-md)",
+                }}
+              >
+                <div>
+                  <strong>Description</strong>
+
+                  <p
+                    style={{
+                      marginBottom: 0,
+                      color:
+                        "var(--aix-color-text-muted)",
+                    }}
+                  >
+                    {selectedDimension.description ||
+                      "No description has been provided."}
+                  </p>
+                </div>
+
+                <div>
+                  <strong>Order position</strong>
+
+                  <p
+                    style={{
+                      marginBottom: 0,
+                      color:
+                        "var(--aix-color-text-muted)",
+                    }}
+                  >
+                    {selectedDimension.order_position}
+                  </p>
+                </div>
+
+                <div>
+                  <strong>Dimension ID</strong>
+
+                  <p
+                    style={{
+                      marginBottom: 0,
+                      color:
+                        "var(--aix-color-text-muted)",
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    {selectedDimension.id}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <StatusMessage
+              type="empty"
+              title="Nothing selected"
+              message="Select a dimension to view its details."
+            />
+          )}
         </Panel>
 
         <Panel
@@ -78,11 +180,25 @@ export function IndexWorkspaceShell() {
           active={activeTab === "copilot"}
           isAiRegion
         >
-          <StatusMessage
-            type="empty"
-            title="No suggestions yet"
-            message="AI-generated suggestions will remain visually distinct until accepted."
-          />
+          {!selectedIndex ? (
+            <StatusMessage
+              type="empty"
+              title="No index selected"
+              message="Open an index before requesting methodology suggestions."
+            />
+          ) : selectedDimension ? (
+            <StatusMessage
+              type="empty"
+              title={`No suggestions for ${selectedDimension.name}`}
+              message="AI-generated dimension and indicator suggestions will appear here later and remain visually distinct until accepted."
+            />
+          ) : (
+            <StatusMessage
+              type="empty"
+              title="No suggestions yet"
+              message="Select a dimension to provide context for future AI suggestions."
+            />
+          )}
         </Panel>
       </div>
     </section>
@@ -117,6 +233,7 @@ function Panel({
     >
       <h2
         style={{
+          marginTop: 0,
           fontSize: "14px",
           textTransform: "uppercase",
           letterSpacing: "0.05em",
