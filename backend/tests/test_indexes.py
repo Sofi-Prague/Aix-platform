@@ -161,6 +161,7 @@ def test_user_cannot_see_another_tenants_index(
 
         # Returning 404 prevents leaking that another tenant's record exists.
         assert detail_response.status_code == 404
+ 
 
     finally:
         db.query(Index).filter(Index.tenant_id == other_tenant_id).delete(
@@ -168,3 +169,165 @@ def test_user_cannot_see_another_tenants_index(
         )
         db.commit()
         db.close()
+
+def test_create_index(
+    client: TestClient,
+    temporary_user: dict,
+    auth_headers: dict[str, str],
+):
+    slug = f"created-index-{uuid.uuid4()}"
+
+    response = client.post(
+        "/indexes",
+        headers=auth_headers,
+        json={
+            "name": "Created Test Index",
+            "slug": slug,
+            "description": "Created by an automated test.",
+        },
+    )
+
+    assert response.status_code == 201, response.text
+
+    body = response.json()
+
+    assert body["name"] == "Created Test Index"
+    assert body["slug"] == slug
+    assert body["status"] == "draft"
+    assert body["tenant_id"] == temporary_user["tenant_id"]
+    assert body["created_by"] == temporary_user["id"]
+
+
+def test_duplicate_slug_is_rejected(
+    client: TestClient,
+    temporary_user: dict,
+    auth_headers: dict[str, str],
+):
+    slug = f"duplicate-index-{uuid.uuid4()}"
+
+    first_response = client.post(
+        "/indexes",
+        headers=auth_headers,
+        json={
+            "name": "First Index",
+            "slug": slug,
+            "description": None,
+        },
+    )
+
+    assert first_response.status_code == 201
+
+    second_response = client.post(
+        "/indexes",
+        headers=auth_headers,
+        json={
+            "name": "Second Index",
+            "slug": slug,
+            "description": None,
+        },
+    )
+
+    assert second_response.status_code == 409
+
+
+def test_update_index(
+    client: TestClient,
+    temporary_user: dict,
+    auth_headers: dict[str, str],
+):
+    slug = f"update-index-{uuid.uuid4()}"
+
+    create_response = client.post(
+        "/indexes",
+        headers=auth_headers,
+        json={
+            "name": "Original Name",
+            "slug": slug,
+            "description": "Original description.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    update_response = client.patch(
+        f"/indexes/{slug}",
+        headers=auth_headers,
+        json={
+            "name": "Updated Name",
+            "description": "Updated description.",
+            "status": "published",
+        },
+    )
+
+    assert update_response.status_code == 200, update_response.text
+
+    body = update_response.json()
+
+    assert body["name"] == "Updated Name"
+    assert body["description"] == "Updated description."
+    assert body["status"] == "published"
+
+
+def test_update_missing_index_returns_404(
+    client: TestClient,
+    auth_headers: dict[str, str],
+):
+    missing_slug = f"missing-update-{uuid.uuid4()}"
+
+    response = client.patch(
+        f"/indexes/{missing_slug}",
+        headers=auth_headers,
+        json={
+            "name": "Does Not Exist",
+        },
+    )
+
+    assert response.status_code == 404
+
+
+def test_delete_index(
+    client: TestClient,
+    temporary_user: dict,
+    auth_headers: dict[str, str],
+):
+    slug = f"delete-index-{uuid.uuid4()}"
+
+    create_response = client.post(
+        "/indexes",
+        headers=auth_headers,
+        json={
+            "name": "Delete Test Index",
+            "slug": slug,
+            "description": "This index will be deleted.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    delete_response = client.delete(
+        f"/indexes/{slug}",
+        headers=auth_headers,
+    )
+
+    assert delete_response.status_code == 204
+
+    get_response = client.get(
+        f"/indexes/{slug}",
+        headers=auth_headers,
+    )
+
+    assert get_response.status_code == 404
+
+
+def test_delete_missing_index_returns_404(
+    client: TestClient,
+    auth_headers: dict[str, str],
+):
+    missing_slug = f"missing-delete-{uuid.uuid4()}"
+
+    response = client.delete(
+        f"/indexes/{missing_slug}",
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 404

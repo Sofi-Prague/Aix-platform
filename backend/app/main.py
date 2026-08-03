@@ -1,5 +1,3 @@
-import os
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -15,12 +13,10 @@ from app.modules.analytics_audit.router import router as audit_router
 
 app = FastAPI(title=settings.app_name)
 
+
 allowed_origins = [
     origin.strip()
-    for origin in os.getenv(
-        "ALLOWED_ORIGINS",
-        "http://localhost:3000",
-    ).split(",")
+    for origin in settings.allowed_origins.split(",")
     if origin.strip()
 ]
 
