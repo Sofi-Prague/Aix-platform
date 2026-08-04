@@ -3,27 +3,22 @@
 import { FormEvent, useEffect, useState } from "react";
 
 import {
-  createDimension,
-  deleteDimension,
-  getDimensions,
+  createIndicator,
+  deleteIndicator,
+  getIndicators,
   type DimensionRecord,
   type IndicatorRecord,
   type IndexRecord,
-  updateDimension,
+  updateIndicator,
 } from "../lib/api";
-
-import { IndicatorManager } from "./IndicatorManager";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { StatusMessage } from "./ui/StatusMessage";
 
-type DimensionManagerProps = {
-  selectedIndex: IndexRecord | null;
-  selectedDimension: DimensionRecord | null;
+type IndicatorManagerProps = {
+  selectedIndex: IndexRecord;
+  selectedDimension: DimensionRecord;
   selectedIndicator: IndicatorRecord | null;
-  onSelectDimension: (
-    dimension: DimensionRecord | null,
-  ) => void;
   onSelectIndicator: (
     indicator: IndicatorRecord | null,
   ) => void;
@@ -31,24 +26,35 @@ type DimensionManagerProps = {
 
 type FormMode = "closed" | "create" | "edit";
 
-export function DimensionManager({
+type Directionality =
+  | "higher_is_better"
+  | "lower_is_better"
+  | "";
+
+export function IndicatorManager({
   selectedIndex,
   selectedDimension,
   selectedIndicator,
-  onSelectDimension,
   onSelectIndicator,
-}: DimensionManagerProps) {
-  const [dimensions, setDimensions] = useState<
-    DimensionRecord[]
+}: IndicatorManagerProps) {
+  const [indicators, setIndicators] = useState<
+    IndicatorRecord[]
   >([]);
 
   const [mode, setMode] = useState<FormMode>("closed");
 
-  const [editingDimension, setEditingDimension] =
-    useState<DimensionRecord | null>(null);
+  const [editingIndicator, setEditingIndicator] =
+    useState<IndicatorRecord | null>(null);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [unit, setUnit] = useState("");
+  const [directionality, setDirectionality] =
+    useState<Directionality>("");
+
+  const [indicatorStatus, setIndicatorStatus] =
+    useState<"draft" | "ready">("draft");
+
   const [orderPosition, setOrderPosition] = useState(0);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -61,79 +67,85 @@ export function DimensionManager({
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    async function loadDimensions(): Promise<void> {
-      if (!selectedIndex) {
-        setDimensions([]);
-        setMode("closed");
-        setEditingDimension(null);
-        return;
-      }
-
+    async function loadIndicators(): Promise<void> {
       setIsLoading(true);
       setError("");
       setMessage("");
       setMode("closed");
-      setEditingDimension(null);
+      setEditingIndicator(null);
 
       try {
-        const result = await getDimensions(
+        const result = await getIndicators(
           selectedIndex.slug,
+          selectedDimension.id,
         );
 
-        setDimensions(result);
+        setIndicators(result);
       } catch (caughtError) {
         setError(
           caughtError instanceof Error
             ? caughtError.message
-            : "Unable to load dimensions.",
+            : "Unable to load indicators.",
         );
       } finally {
         setIsLoading(false);
       }
     }
 
-    void loadDimensions();
-  }, [selectedIndex]);
+    void loadIndicators();
+  }, [selectedIndex.slug, selectedDimension.id]);
 
   function resetForm(): void {
     setMode("closed");
-    setEditingDimension(null);
+    setEditingIndicator(null);
     setName("");
     setDescription("");
+    setUnit("");
+    setDirectionality("");
+    setIndicatorStatus("draft");
     setOrderPosition(0);
     setError("");
   }
 
   function beginCreate(): void {
     const nextPosition =
-      dimensions.length === 0
+      indicators.length === 0
         ? 0
         : Math.max(
-            ...dimensions.map(
-              (dimension) => dimension.order_position,
+            ...indicators.map(
+              (indicator) => indicator.order_position,
             ),
           ) + 1;
 
-    setEditingDimension(null);
+    setEditingIndicator(null);
     setName("");
     setDescription("");
+    setUnit("");
+    setDirectionality("");
+    setIndicatorStatus("draft");
     setOrderPosition(nextPosition);
     setError("");
     setMessage("");
     setMode("create");
   }
 
-  function beginEdit(dimension: DimensionRecord): void {
-    setEditingDimension(dimension);
-    setName(dimension.name);
-    setDescription(dimension.description ?? "");
-    setOrderPosition(dimension.order_position);
+  function beginEdit(
+    indicator: IndicatorRecord,
+  ): void {
+    setEditingIndicator(indicator);
+    setName(indicator.name);
+    setDescription(indicator.description ?? "");
+    setUnit(indicator.unit ?? "");
+    setDirectionality(
+      indicator.directionality ?? "",
+    );
+    setIndicatorStatus(indicator.status);
+    setOrderPosition(indicator.order_position);
     setError("");
     setMessage("");
     setMode("edit");
 
-    onSelectDimension(dimension);
-    onSelectIndicator(null);
+    onSelectIndicator(indicator);
   }
 
   async function handleSubmit(
@@ -141,26 +153,29 @@ export function DimensionManager({
   ): Promise<void> {
     event.preventDefault();
 
-    if (!selectedIndex) {
-      return;
-    }
-
     setIsSaving(true);
     setError("");
     setMessage("");
 
     try {
       if (mode === "create") {
-        const created = await createDimension(
+        const created = await createIndicator(
           selectedIndex.slug,
+          selectedDimension.id,
           {
             name,
             description: description || null,
+            unit: unit || null,
+            directionality:
+              directionality === ""
+                ? null
+                : directionality,
+            status: indicatorStatus,
             order_position: orderPosition,
           },
         );
 
-        setDimensions((current) =>
+        setIndicators((current) =>
           [...current, created].sort(
             (first, second) =>
               first.order_position -
@@ -168,30 +183,37 @@ export function DimensionManager({
           ),
         );
 
-        onSelectDimension(created);
+        onSelectIndicator(created);
         setMessage(`Created "${created.name}".`);
       }
 
       if (
         mode === "edit" &&
-        editingDimension
+        editingIndicator
       ) {
-        const updated = await updateDimension(
+        const updated = await updateIndicator(
           selectedIndex.slug,
-          editingDimension.id,
+          selectedDimension.id,
+          editingIndicator.id,
           {
             name,
             description: description || null,
+            unit: unit || null,
+            directionality:
+              directionality === ""
+                ? null
+                : directionality,
+            status: indicatorStatus,
             order_position: orderPosition,
           },
         );
 
-        setDimensions((current) =>
+        setIndicators((current) =>
           current
-            .map((dimension) =>
-              dimension.id === updated.id
+            .map((indicator) =>
+              indicator.id === updated.id
                 ? updated
-                : dimension,
+                : indicator,
             )
             .sort(
               (first, second) =>
@@ -200,20 +222,16 @@ export function DimensionManager({
             ),
         );
 
-        onSelectDimension(updated);
+        onSelectIndicator(updated);
         setMessage(`Updated "${updated.name}".`);
       }
 
-      setMode("closed");
-      setEditingDimension(null);
-      setName("");
-      setDescription("");
-      setOrderPosition(0);
+      resetForm();
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
           ? caughtError.message
-          : "Unable to save the dimension.",
+          : "Unable to save the indicator.",
       );
     } finally {
       setIsSaving(false);
@@ -221,80 +239,82 @@ export function DimensionManager({
   }
 
   async function handleDelete(
-    dimension: DimensionRecord,
+    indicator: IndicatorRecord,
   ): Promise<void> {
-    if (!selectedIndex) {
-      return;
-    }
-
     const confirmed = window.confirm(
-      `Delete "${dimension.name}"? Any indicators inside it will also be removed.`,
+      `Delete "${indicator.name}"? This action cannot be undone.`,
     );
 
     if (!confirmed) {
       return;
     }
 
-    setDeletingId(dimension.id);
+    setDeletingId(indicator.id);
     setError("");
     setMessage("");
 
     try {
-      await deleteDimension(
+      await deleteIndicator(
         selectedIndex.slug,
-        dimension.id,
+        selectedDimension.id,
+        indicator.id,
       );
 
-      setDimensions((current) =>
+      setIndicators((current) =>
         current.filter(
-          (item) => item.id !== dimension.id,
+          (item) => item.id !== indicator.id,
         ),
       );
 
-      if (selectedDimension?.id === dimension.id) {
-        onSelectDimension(null);
+      if (selectedIndicator?.id === indicator.id) {
         onSelectIndicator(null);
       }
 
-      if (editingDimension?.id === dimension.id) {
+      if (editingIndicator?.id === indicator.id) {
         resetForm();
       }
 
-      setMessage(`Deleted "${dimension.name}".`);
+      setMessage(`Deleted "${indicator.name}".`);
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
           ? caughtError.message
-          : "Unable to delete the dimension.",
+          : "Unable to delete the indicator.",
       );
     } finally {
       setDeletingId(null);
     }
   }
 
-  if (!selectedIndex) {
-    return (
-      <StatusMessage
-        type="empty"
-        title="No index selected"
-        message="Open an index before managing its dimensions."
-      />
-    );
-  }
-
   return (
-    <div>
+    <section
+      aria-labelledby="indicator-manager-heading"
+      style={{
+        marginTop: "var(--aix-space-lg)",
+        paddingTop: "var(--aix-space-md)",
+        borderTop:
+          "1px solid var(--aix-color-border)",
+      }}
+    >
       <div
         style={{
           display: "flex",
-          alignItems: "center",
           justifyContent: "space-between",
+          alignItems: "center",
           gap: "var(--aix-space-sm)",
           marginBottom: "var(--aix-space-md)",
         }}
       >
         <div>
-          <strong>{selectedIndex.name}</strong>
+          <h3
+            id="indicator-manager-heading"
+            style={{
+              margin: 0,
+              fontSize: "16px",
+            }}
+          >
+            Indicators
+          </h3>
 
           <p
             style={{
@@ -303,7 +323,7 @@ export function DimensionManager({
               fontSize: "13px",
             }}
           >
-            Dimensions
+            {selectedDimension.name}
           </p>
         </div>
 
@@ -311,7 +331,7 @@ export function DimensionManager({
           type="button"
           onClick={beginCreate}
         >
-          Add dimension
+          Add indicator
         </Button>
       </div>
 
@@ -336,7 +356,7 @@ export function DimensionManager({
         >
           <StatusMessage
             type="error"
-            title="Dimension operation failed"
+            title="Indicator operation failed"
             message={error}
           />
         </div>
@@ -348,18 +368,18 @@ export function DimensionManager({
           style={{
             display: "grid",
             gap: "var(--aix-space-md)",
-            marginBlock: "var(--aix-space-md)",
+            marginBottom: "var(--aix-space-lg)",
           }}
         >
-          <h3 style={{ margin: 0 }}>
+          <h4 style={{ margin: 0 }}>
             {mode === "create"
-              ? "Add dimension"
-              : "Edit dimension"}
-          </h3>
+              ? "Create indicator"
+              : "Edit indicator"}
+          </h4>
 
           <Input
-            id="dimension-name"
-            name="dimension-name"
+            id="indicator-name"
+            name="indicator-name"
             label="Name"
             required
             value={name}
@@ -374,12 +394,12 @@ export function DimensionManager({
               gap: "var(--aix-space-sm)",
             }}
           >
-            <label htmlFor="dimension-description">
+            <label htmlFor="indicator-description">
               Description
             </label>
 
             <textarea
-              id="dimension-description"
+              id="indicator-description"
               rows={4}
               value={description}
               onChange={(event) =>
@@ -399,8 +419,101 @@ export function DimensionManager({
           </div>
 
           <Input
-            id="dimension-position"
-            name="dimension-position"
+            id="indicator-unit"
+            name="indicator-unit"
+            label="Unit"
+            value={unit}
+            onChange={(event) =>
+              setUnit(event.target.value)
+            }
+          />
+
+          <div
+            style={{
+              display: "grid",
+              gap: "var(--aix-space-sm)",
+            }}
+          >
+            <label htmlFor="indicator-directionality">
+              Directionality
+            </label>
+
+            <select
+              id="indicator-directionality"
+              value={directionality}
+              onChange={(event) =>
+                setDirectionality(
+                  event.target.value as Directionality,
+                )
+              }
+              style={{
+                minHeight: "42px",
+                padding: "10px 12px",
+                border:
+                  "1px solid var(--aix-color-border)",
+                borderRadius:
+                  "var(--aix-radius-sm)",
+                background:
+                  "var(--aix-color-surface)",
+                color: "var(--aix-color-text)",
+                font: "inherit",
+              }}
+            >
+              <option value="">
+                Not specified
+              </option>
+
+              <option value="higher_is_better">
+                Higher is better
+              </option>
+
+              <option value="lower_is_better">
+                Lower is better
+              </option>
+            </select>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gap: "var(--aix-space-sm)",
+            }}
+          >
+            <label htmlFor="indicator-status">
+              Status
+            </label>
+
+            <select
+              id="indicator-status"
+              value={indicatorStatus}
+              onChange={(event) =>
+                setIndicatorStatus(
+                  event.target.value as
+                    | "draft"
+                    | "ready",
+                )
+              }
+              style={{
+                minHeight: "42px",
+                padding: "10px 12px",
+                border:
+                  "1px solid var(--aix-color-border)",
+                borderRadius:
+                  "var(--aix-radius-sm)",
+                background:
+                  "var(--aix-color-surface)",
+                color: "var(--aix-color-text)",
+                font: "inherit",
+              }}
+            >
+              <option value="draft">Draft</option>
+              <option value="ready">Ready</option>
+            </select>
+          </div>
+
+          <Input
+            id="indicator-order"
+            name="indicator-order"
             label="Order position"
             type="number"
             min={0}
@@ -424,7 +537,7 @@ export function DimensionManager({
               isLoading={isSaving}
             >
               {mode === "create"
-                ? "Create dimension"
+                ? "Create indicator"
                 : "Save changes"}
             </Button>
 
@@ -442,13 +555,13 @@ export function DimensionManager({
       {isLoading ? (
         <StatusMessage
           type="loading"
-          title="Loading dimensions…"
+          title="Loading indicators…"
         />
-      ) : dimensions.length === 0 ? (
+      ) : indicators.length === 0 ? (
         <StatusMessage
           type="empty"
-          title="No dimensions yet"
-          message="Add the first dimension to begin building the methodology."
+          title="No indicators yet"
+          message="Add the first indicator to this dimension."
         />
       ) : (
         <ul
@@ -460,13 +573,13 @@ export function DimensionManager({
             gap: "var(--aix-space-sm)",
           }}
         >
-          {dimensions.map((dimension) => {
+          {indicators.map((indicator) => {
             const isSelected =
-              selectedDimension?.id === dimension.id;
+              selectedIndicator?.id === indicator.id;
 
             return (
               <li
-                key={dimension.id}
+                key={indicator.id}
                 style={{
                   padding: "var(--aix-space-sm)",
                   border: isSelected
@@ -480,10 +593,9 @@ export function DimensionManager({
               >
                 <button
                   type="button"
-                  onClick={() => {
-                    onSelectDimension(dimension);
-                    onSelectIndicator(null);
-                  }}
+                  onClick={() =>
+                    onSelectIndicator(indicator)
+                  }
                   style={{
                     width: "100%",
                     border: 0,
@@ -494,28 +606,35 @@ export function DimensionManager({
                     color: "inherit",
                   }}
                 >
-                  <strong>{dimension.name}</strong>
+                  <strong>{indicator.name}</strong>
 
                   <p
                     style={{
                       margin: "4px 0",
                       color:
                         "var(--aix-color-text-muted)",
+                      fontSize: "13px",
                     }}
                   >
-                    Position {dimension.order_position}
+                    {indicator.status}
+                    {indicator.unit
+                      ? ` · ${indicator.unit}`
+                      : ""}
                   </p>
 
-                  {dimension.description && (
+                  {indicator.directionality && (
                     <p
                       style={{
-                        margin: "4px 0 0",
+                        margin: 0,
                         color:
                           "var(--aix-color-text-muted)",
                         fontSize: "13px",
                       }}
                     >
-                      {dimension.description}
+                      {indicator.directionality ===
+                      "higher_is_better"
+                        ? "Higher is better"
+                        : "Lower is better"}
                     </p>
                   )}
                 </button>
@@ -532,7 +651,7 @@ export function DimensionManager({
                     type="button"
                     variant="secondary"
                     onClick={() =>
-                      beginEdit(dimension)
+                      beginEdit(indicator)
                     }
                   >
                     Edit
@@ -542,13 +661,13 @@ export function DimensionManager({
                     type="button"
                     variant="danger"
                     disabled={
-                      deletingId === dimension.id
+                      deletingId === indicator.id
                     }
                     onClick={() =>
-                      void handleDelete(dimension)
+                      void handleDelete(indicator)
                     }
                   >
-                    {deletingId === dimension.id
+                    {deletingId === indicator.id
                       ? "Deleting…"
                       : "Delete"}
                   </Button>
@@ -558,15 +677,6 @@ export function DimensionManager({
           })}
         </ul>
       )}
-
-      {selectedIndex && selectedDimension && (
-        <IndicatorManager
-          selectedIndex={selectedIndex}
-          selectedDimension={selectedDimension}
-          selectedIndicator={selectedIndicator}
-          onSelectIndicator={onSelectIndicator}
-        />
-      )}
-    </div>
+    </section>
   );
 }

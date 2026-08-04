@@ -99,25 +99,7 @@ async function request<T>(
         message = body.detail;
       }
     } catch {
-      // Keep the default error message when the response is not JSON.
-    }
-
-    throw new Error(message);
-  }
-
-  if (!response.ok) {
-    let message = `Request failed with status ${response.status}`;
-
-    try {
-      const body = (await response.json()) as {
-        detail?: string;
-      };
-
-      if (body.detail) {
-        message = body.detail;
-      }
-    } catch {
-      // Keep the fallback message.
+      // Keep the fallback message when the response is not JSON.
     }
 
     throw new Error(message);
@@ -224,3 +206,104 @@ export async function deleteDimension(
     },
   );
 }
+
+export type IndicatorRecord = {
+  id: string;
+  dimension_id: string;
+  name: string;
+  description: string | null;
+  unit: string | null;
+  directionality:
+    | "higher_is_better"
+    | "lower_is_better"
+    | null;
+  status: "draft" | "ready";
+  order_position: number;
+  created_at: string;
+};
+
+export type CreateIndicatorRequest = {
+  name: string;
+  description?: string | null;
+  unit?: string | null;
+  directionality?:
+    | "higher_is_better"
+    | "lower_is_better"
+    | null;
+  status?: "draft" | "ready";
+  order_position?: number;
+};
+
+export type UpdateIndicatorRequest = {
+  name?: string;
+  description?: string | null;
+  unit?: string | null;
+  directionality?:
+    | "higher_is_better"
+    | "lower_is_better"
+    | null;
+  status?: "draft" | "ready";
+  order_position?: number;
+};
+
+export function getIndicators(
+  indexSlug: string,
+  dimensionId: string,
+): Promise<IndicatorRecord[]> {
+  return request<IndicatorRecord[]>(
+    `/methodology/indexes/${encodeURIComponent(
+      indexSlug,
+    )}/dimensions/${encodeURIComponent(
+      dimensionId,
+    )}/indicators`,
+  );
+}
+
+export function createIndicator(
+  indexSlug: string,
+  dimensionId: string,
+  payload: CreateIndicatorRequest,
+): Promise<IndicatorRecord> {
+  return request<IndicatorRecord>(
+    `/methodology/indexes/${encodeURIComponent(
+      indexSlug,
+    )}/dimensions/${dimensionId}/indicators`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export function updateIndicator(
+  indexSlug: string,
+  dimensionId: string,
+  indicatorId: string,
+  payload: UpdateIndicatorRequest,
+): Promise<IndicatorRecord> {
+  return request<IndicatorRecord>(
+    `/methodology/indexes/${encodeURIComponent(
+      indexSlug,
+    )}/dimensions/${dimensionId}/indicators/${indicatorId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function deleteIndicator(
+  indexSlug: string,
+  dimensionId: string,
+  indicatorId: string,
+): Promise<void> {
+  await request<void>(
+    `/methodology/indexes/${encodeURIComponent(
+      indexSlug,
+    )}/dimensions/${dimensionId}/indicators/${indicatorId}`,
+    {
+      method: "DELETE",
+    },
+  );
+}
+

@@ -11,6 +11,7 @@ import {
   getCurrentUser,
   getIndexes,
   type DimensionRecord,
+  type IndicatorRecord,
   type IndexRecord,
   type User,
 } from "../../lib/api";
@@ -19,6 +20,8 @@ import {
   getAccessToken,
   removeAccessToken,
 } from "../../lib/auth";
+
+
 
 export default function WorkspacePage() {
   const router = useRouter();
@@ -31,6 +34,9 @@ export default function WorkspacePage() {
 
   const [selectedDimension, setSelectedDimension] =
     useState<DimensionRecord | null>(null);
+
+  const [selectedIndicator, setSelectedIndicator] =
+    useState<IndicatorRecord | null>(null);
 
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -81,6 +87,14 @@ export default function WorkspacePage() {
   ): void {
     setSelectedIndex(index);
     setSelectedDimension(null);
+    setSelectedIndicator(null);
+  }
+
+  function handleSelectDimension(
+    dimension: DimensionRecord | null,
+  ): void {
+    setSelectedDimension(dimension);
+    setSelectedIndicator(null);
   }
 
   function handleIndexesChange(
@@ -101,6 +115,7 @@ export default function WorkspacePage() {
 
     if (!updatedSelectedIndex) {
       setSelectedDimension(null);
+      setSelectedIndicator(null);
     }
   }
 
@@ -192,7 +207,9 @@ export default function WorkspacePage() {
       <IndexWorkspaceShell
         selectedIndex={selectedIndex}
         selectedDimension={selectedDimension}
-        onSelectDimension={setSelectedDimension}
+        selectedIndicator={selectedIndicator}
+        onSelectDimension={handleSelectDimension}
+        onSelectIndicator={setSelectedIndicator}
       />
     </main>
   );

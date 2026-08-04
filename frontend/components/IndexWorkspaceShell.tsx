@@ -4,8 +4,10 @@ import { useCallback, useState } from "react";
 
 import type {
   DimensionRecord,
+  IndicatorRecord,
   IndexRecord,
 } from "../lib/api";
+
 import { DimensionManager } from "./DimensionManager";
 import { Button } from "./ui/Button";
 import { StatusMessage } from "./ui/StatusMessage";
@@ -15,15 +17,21 @@ type WorkspaceTab = "tree" | "detail" | "copilot";
 type IndexWorkspaceShellProps = {
   selectedIndex: IndexRecord | null;
   selectedDimension: DimensionRecord | null;
+  selectedIndicator: IndicatorRecord | null;
   onSelectDimension: (
     dimension: DimensionRecord | null,
+  ) => void;
+  onSelectIndicator: (
+    indicator: IndicatorRecord | null,
   ) => void;
 };
 
 export function IndexWorkspaceShell({
   selectedIndex,
   selectedDimension,
+  selectedIndicator,
   onSelectDimension,
+  onSelectIndicator,
 }: IndexWorkspaceShellProps) {
   const [activeTab, setActiveTab] =
     useState<WorkspaceTab>("tree");
@@ -38,6 +46,20 @@ export function IndexWorkspaceShell({
     },
     [onSelectDimension],
   );
+
+  const handleSelectIndicator = useCallback(
+    (indicator: IndicatorRecord | null): void => {
+      onSelectIndicator(indicator);
+
+      if (indicator) {
+        setActiveTab("detail");
+      }
+    },
+    [onSelectIndicator],
+  );
+  
+
+  
 
   return (
     <section aria-label="Index workspace">
@@ -90,7 +112,9 @@ export function IndexWorkspaceShell({
           <DimensionManager
             selectedIndex={selectedIndex}
             selectedDimension={selectedDimension}
+            selectedIndicator={selectedIndicator}
             onSelectDimension={handleSelectDimension}
+            onSelectIndicator={handleSelectIndicator}
           />
         </Panel>
 
@@ -104,73 +128,60 @@ export function IndexWorkspaceShell({
               title="No index selected"
               message="Open an index before viewing methodology details."
             />
+          ) : selectedIndicator ? (
+            <div>
+              <h3>{selectedIndicator.name}</h3>
+
+              <p>
+                {selectedIndicator.description ||
+                  "No description has been provided."}
+              </p>
+
+              <p>
+                <strong>Unit:</strong>{" "}
+                {selectedIndicator.unit || "Not specified"}
+              </p>
+
+              <p>
+                <strong>Directionality:</strong>{" "}
+                {selectedIndicator.directionality ===
+                "higher_is_better"
+                  ? "Higher is better"
+                  : selectedIndicator.directionality ===
+                      "lower_is_better"
+                    ? "Lower is better"
+                    : "Not specified"}
+              </p>
+
+              <p>
+                <strong>Status:</strong>{" "}
+                {selectedIndicator.status}
+              </p>
+
+              <p>
+                <strong>Order position:</strong>{" "}
+                {selectedIndicator.order_position}
+              </p>
+            </div>
           ) : selectedDimension ? (
             <div>
-              <h3
-                style={{
-                  marginTop: 0,
-                  marginBottom: "var(--aix-space-md)",
-                }}
-              >
-                {selectedDimension.name}
-              </h3>
+              <h3>{selectedDimension.name}</h3>
 
-              <div
-                style={{
-                  display: "grid",
-                  gap: "var(--aix-space-md)",
-                }}
-              >
-                <div>
-                  <strong>Description</strong>
+              <p>
+                {selectedDimension.description ||
+                  "No description has been provided."}
+              </p>
 
-                  <p
-                    style={{
-                      marginBottom: 0,
-                      color:
-                        "var(--aix-color-text-muted)",
-                    }}
-                  >
-                    {selectedDimension.description ||
-                      "No description has been provided."}
-                  </p>
-                </div>
-
-                <div>
-                  <strong>Order position</strong>
-
-                  <p
-                    style={{
-                      marginBottom: 0,
-                      color:
-                        "var(--aix-color-text-muted)",
-                    }}
-                  >
-                    {selectedDimension.order_position}
-                  </p>
-                </div>
-
-                <div>
-                  <strong>Dimension ID</strong>
-
-                  <p
-                    style={{
-                      marginBottom: 0,
-                      color:
-                        "var(--aix-color-text-muted)",
-                      wordBreak: "break-all",
-                    }}
-                  >
-                    {selectedDimension.id}
-                  </p>
-                </div>
-              </div>
+              <p>
+                <strong>Order position:</strong>{" "}
+                {selectedDimension.order_position}
+              </p>
             </div>
           ) : (
             <StatusMessage
               type="empty"
               title="Nothing selected"
-              message="Select a dimension to view its details."
+              message="Select a dimension or indicator to view its details."
             />
           )}
         </Panel>
@@ -180,23 +191,23 @@ export function IndexWorkspaceShell({
           active={activeTab === "copilot"}
           isAiRegion
         >
-          {!selectedIndex ? (
+          {selectedIndicator ? (
             <StatusMessage
               type="empty"
-              title="No index selected"
-              message="Open an index before requesting methodology suggestions."
+              title={`No suggestions for ${selectedIndicator.name}`}
+              message="AI suggestions for indicator definitions and data sources will appear here later."
             />
           ) : selectedDimension ? (
             <StatusMessage
               type="empty"
               title={`No suggestions for ${selectedDimension.name}`}
-              message="AI-generated dimension and indicator suggestions will appear here later and remain visually distinct until accepted."
+              message="AI-generated indicator suggestions will appear here later."
             />
           ) : (
             <StatusMessage
               type="empty"
               title="No suggestions yet"
-              message="Select a dimension to provide context for future AI suggestions."
+              message="Select a dimension or indicator to provide context."
             />
           )}
         </Panel>
