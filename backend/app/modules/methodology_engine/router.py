@@ -1,7 +1,7 @@
 """
 Methodology Engine
 
-Provides dimension CRUD for indexes owned by the authenticated user's tenant.
+Provides tenant-scoped CRUD operations for dimensions and indicators.
 """
 
 import uuid
@@ -10,12 +10,15 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.db import get_db
-from app.core.models import Dimension, Index, User
+from app.core.models import Dimension, Index, Indicator, User
 from app.modules.identity.router import get_current_user
 from app.modules.methodology_engine.schemas import (
     DimensionCreate,
     DimensionOut,
     DimensionUpdate,
+    IndicatorCreate,
+    IndicatorOut,
+    IndicatorUpdate,
 )
 
 router = APIRouter(
@@ -26,6 +29,8 @@ router = APIRouter(
 
 @router.get("/ping")
 def ping():
+    """Public health check for the Methodology Engine."""
+
     return {
         "module": "methodology_engine",
         "status": "ok",
@@ -37,6 +42,13 @@ def get_owned_index(
     db: Session,
     current_user: User,
 ) -> Index:
+    """
+    Retrieve an index belonging to the authenticated user's tenant.
+
+    A 404 response is returned rather than exposing whether another
+    tenant owns an index with the requested slug.
+    """
+
     index = (
         db.query(Index)
         .filter(
@@ -55,6 +67,65 @@ def get_owned_index(
     return index
 
 
+def get_owned_dimension(
+    index: Index,
+    dimension_id: uuid.UUID,
+    db: Session,
+) -> Dimension:
+    """
+    Retrieve a dimension belonging to the verified parent index.
+    """
+
+    dimension = (
+        db.query(Dimension)
+        .filter(
+            Dimension.id == dimension_id,
+            Dimension.index_id == index.id,
+        )
+        .first()
+    )
+
+    if dimension is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Dimension not found",
+        )
+
+    return dimension
+
+
+def get_owned_indicator(
+    dimension: Dimension,
+    indicator_id: uuid.UUID,
+    db: Session,
+) -> Indicator:
+    """
+    Retrieve an indicator belonging to the verified parent dimension.
+    """
+
+    indicator = (
+        db.query(Indicator)
+        .filter(
+            Indicator.id == indicator_id,
+            Indicator.dimension_id == dimension.id,
+        )
+        .first()
+    )
+
+    if indicator is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Indicator not found",
+        )
+
+    return indicator
+
+
+# ---------------------------------------------------------------------------
+# Dimension routes
+# ---------------------------------------------------------------------------
+
+
 @router.get(
     "/indexes/{index_slug}/dimensions",
     response_model=list[DimensionOut],
@@ -64,7 +135,13 @@ def list_dimensions(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    index = get_owned_index(index_slug, db, current_user)
+    """List the dimensions belonging to an index."""
+
+    index = get_owned_index(
+        index_slug,
+        db,
+        current_user,
+    )
 
     return (
         db.query(Dimension)
@@ -88,7 +165,13 @@ def create_dimension(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    index = get_owned_index(index_slug, db, current_user)
+    """Create a dimension within an index."""
+
+    index = get_owned_index(
+        index_slug,
+        db,
+        current_user,
+    )
 
     dimension = Dimension(
         index_id=index.id,
@@ -114,24 +197,19 @@ def get_dimension(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    index = get_owned_index(index_slug, db, current_user)
+    """Retrieve one dimension from an index."""
 
-    dimension = (
-        db.query(Dimension)
-        .filter(
-            Dimension.id == dimension_id,
-            Dimension.index_id == index.id,
-        )
-        .first()
+    index = get_owned_index(
+        index_slug,
+        db,
+        current_user,
     )
 
-    if dimension is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Dimension not found",
-        )
-
-    return dimension
+    return get_owned_dimension(
+        index,
+        dimension_id,
+        db,
+    )
 
 
 @router.patch(
@@ -145,22 +223,19 @@ def update_dimension(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    index = get_owned_index(index_slug, db, current_user)
+    """Update a dimension belonging to an index."""
 
-    dimension = (
-        db.query(Dimension)
-        .filter(
-            Dimension.id == dimension_id,
-            Dimension.index_id == index.id,
-        )
-        .first()
+    index = get_owned_index(
+        index_slug,
+        db,
+        current_user,
     )
 
-    if dimension is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Dimension not found",
-        )
+    dimension = get_owned_dimension(
+        index,
+        dimension_id,
+        db,
+    )
 
     updates = payload.model_dump(exclude_unset=True)
 
@@ -186,24 +261,224 @@ def delete_dimension(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    index = get_owned_index(index_slug, db, current_user)
+    """
+    Delete a dimension.
 
-    dimension = (
-        db.query(Dimension)
-        .filter(
-            Dimension.id == dimension_id,
-            Dimension.index_id == index.id,
-        )
-        .first()
+    Indicators belonging to it are deleted by the database's
+    ON DELETE CASCADE constraint.
+    """
+
+    index = get_owned_index(
+        index_slug,
+        db,
+        current_user,
     )
 
-    if dimension is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Dimension not found",
-        )
+    dimension = get_owned_dimension(
+        index,
+        dimension_id,
+        db,
+    )
 
     db.delete(dimension)
+    db.commit()
+
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Indicator routes
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/indexes/{index_slug}/dimensions/{dimension_id}/indicators",
+    response_model=list[IndicatorOut],
+)
+def list_indicators(
+    index_slug: str,
+    dimension_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List indicators belonging to a dimension."""
+
+    index = get_owned_index(
+        index_slug,
+        db,
+        current_user,
+    )
+
+    dimension = get_owned_dimension(
+        index,
+        dimension_id,
+        db,
+    )
+
+    return (
+        db.query(Indicator)
+        .filter(Indicator.dimension_id == dimension.id)
+        .order_by(
+            Indicator.order_position.asc(),
+            Indicator.created_at.asc(),
+        )
+        .all()
+    )
+
+
+@router.post(
+    "/indexes/{index_slug}/dimensions/{dimension_id}/indicators",
+    response_model=IndicatorOut,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_indicator(
+    index_slug: str,
+    dimension_id: uuid.UUID,
+    payload: IndicatorCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Create an indicator within a dimension."""
+
+    index = get_owned_index(
+        index_slug,
+        db,
+        current_user,
+    )
+
+    dimension = get_owned_dimension(
+        index,
+        dimension_id,
+        db,
+    )
+
+    indicator = Indicator(
+        dimension_id=dimension.id,
+        name=payload.name.strip(),
+        description=payload.description,
+        unit=payload.unit,
+        directionality=payload.directionality,
+        status=payload.status,
+        order_position=payload.order_position,
+    )
+
+    db.add(indicator)
+    db.commit()
+    db.refresh(indicator)
+
+    return indicator
+
+
+@router.get(
+    "/indexes/{index_slug}/dimensions/{dimension_id}/indicators/{indicator_id}",
+    response_model=IndicatorOut,
+)
+def get_indicator(
+    index_slug: str,
+    dimension_id: uuid.UUID,
+    indicator_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Retrieve one indicator from a dimension."""
+
+    index = get_owned_index(
+        index_slug,
+        db,
+        current_user,
+    )
+
+    dimension = get_owned_dimension(
+        index,
+        dimension_id,
+        db,
+    )
+
+    return get_owned_indicator(
+        dimension,
+        indicator_id,
+        db,
+    )
+
+
+@router.patch(
+    "/indexes/{index_slug}/dimensions/{dimension_id}/indicators/{indicator_id}",
+    response_model=IndicatorOut,
+)
+def update_indicator(
+    index_slug: str,
+    dimension_id: uuid.UUID,
+    indicator_id: uuid.UUID,
+    payload: IndicatorUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update an indicator belonging to a dimension."""
+
+    index = get_owned_index(
+        index_slug,
+        db,
+        current_user,
+    )
+
+    dimension = get_owned_dimension(
+        index,
+        dimension_id,
+        db,
+    )
+
+    indicator = get_owned_indicator(
+        dimension,
+        indicator_id,
+        db,
+    )
+
+    updates = payload.model_dump(exclude_unset=True)
+
+    for field, value in updates.items():
+        if field == "name" and value is not None:
+            value = value.strip()
+
+        setattr(indicator, field, value)
+
+    db.commit()
+    db.refresh(indicator)
+
+    return indicator
+
+
+@router.delete(
+    "/indexes/{index_slug}/dimensions/{dimension_id}/indicators/{indicator_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_indicator(
+    index_slug: str,
+    dimension_id: uuid.UUID,
+    indicator_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete an indicator from a dimension."""
+
+    index = get_owned_index(
+        index_slug,
+        db,
+        current_user,
+    )
+
+    dimension = get_owned_dimension(
+        index,
+        dimension_id,
+        db,
+    )
+
+    indicator = get_owned_indicator(
+        dimension,
+        indicator_id,
+        db,
+    )
+
+    db.delete(indicator)
     db.commit()
 
     return None

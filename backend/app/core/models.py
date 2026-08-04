@@ -49,3 +49,56 @@ class Dimension(Base):
         server_default=func.now(),
         nullable=False,
     )
+
+class Indicator(Base):
+    __tablename__ = "indicators"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+
+    dimension_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("dimensions.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    name = Column(
+        Text,
+        nullable=False,
+    )
+
+    description = Column(
+        Text,
+        nullable=True,
+    )
+
+    unit = Column(
+        Text,
+        nullable=True,
+    )
+
+    directionality = Column(
+        Text,
+        nullable=True,
+    )
+
+    status = Column(
+        Text,
+        nullable=False,
+        default="draft",
+    )
+
+    order_position = Column(
+        Integer,
+        nullable=False,
+        default=0,
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
