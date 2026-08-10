@@ -21,7 +21,6 @@ type DimensionManagerProps = {
   selectedIndex: IndexRecord | null;
   selectedDimension: DimensionRecord | null;
   selectedIndicator: IndicatorRecord | null;
-
   methodologyVersion: number;
 
   onSelectDimension: (
@@ -31,6 +30,8 @@ type DimensionManagerProps = {
   onSelectIndicator: (
     indicator: IndicatorRecord | null,
   ) => void;
+
+  onMethodologyChange: () => void;
 };
 
 type FormMode = "closed" | "create" | "edit";
@@ -42,22 +43,28 @@ export function DimensionManager({
   methodologyVersion,
   onSelectDimension,
   onSelectIndicator,
+  onMethodologyChange,
 }: DimensionManagerProps) {
   const [dimensions, setDimensions] = useState<
     DimensionRecord[]
   >([]);
 
-  const [mode, setMode] = useState<FormMode>("closed");
+  const [mode, setMode] =
+    useState<FormMode>("closed");
 
   const [editingDimension, setEditingDimension] =
     useState<DimensionRecord | null>(null);
 
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [orderPosition, setOrderPosition] = useState(0);
+  const [description, setDescription] =
+    useState("");
+  const [orderPosition, setOrderPosition] =
+    useState(0);
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] =
+    useState(false);
+  const [isSaving, setIsSaving] =
+    useState(false);
 
   const [deletingId, setDeletingId] =
     useState<string | null>(null);
@@ -115,7 +122,8 @@ export function DimensionManager({
         ? 0
         : Math.max(
             ...dimensions.map(
-              (dimension) => dimension.order_position,
+              (dimension) =>
+                dimension.order_position,
             ),
           ) + 1;
 
@@ -128,11 +136,17 @@ export function DimensionManager({
     setMode("create");
   }
 
-  function beginEdit(dimension: DimensionRecord): void {
+  function beginEdit(
+    dimension: DimensionRecord,
+  ): void {
     setEditingDimension(dimension);
     setName(dimension.name);
-    setDescription(dimension.description ?? "");
-    setOrderPosition(dimension.order_position);
+    setDescription(
+      dimension.description ?? "",
+    );
+    setOrderPosition(
+      dimension.order_position,
+    );
     setError("");
     setMessage("");
     setMode("edit");
@@ -156,14 +170,17 @@ export function DimensionManager({
 
     try {
       if (mode === "create") {
-        const created = await createDimension(
-          selectedIndex.slug,
-          {
-            name,
-            description: description || null,
-            order_position: orderPosition,
-          },
-        );
+        const created =
+          await createDimension(
+            selectedIndex.slug,
+            {
+              name,
+              description:
+                description || null,
+              order_position:
+                orderPosition,
+            },
+          );
 
         setDimensions((current) =>
           [...current, created].sort(
@@ -174,27 +191,37 @@ export function DimensionManager({
         );
 
         onSelectDimension(created);
-        setMessage(`Created "${created.name}".`);
+        onSelectIndicator(null);
+
+        onMethodologyChange();
+
+        setMessage(
+          `Created "${created.name}".`,
+        );
       }
 
       if (
         mode === "edit" &&
         editingDimension
       ) {
-        const updated = await updateDimension(
-          selectedIndex.slug,
-          editingDimension.id,
-          {
-            name,
-            description: description || null,
-            order_position: orderPosition,
-          },
-        );
+        const updated =
+          await updateDimension(
+            selectedIndex.slug,
+            editingDimension.id,
+            {
+              name,
+              description:
+                description || null,
+              order_position:
+                orderPosition,
+            },
+          );
 
         setDimensions((current) =>
           current
             .map((dimension) =>
-              dimension.id === updated.id
+              dimension.id ===
+              updated.id
                 ? updated
                 : dimension,
             )
@@ -206,7 +233,13 @@ export function DimensionManager({
         );
 
         onSelectDimension(updated);
-        setMessage(`Updated "${updated.name}".`);
+        onSelectIndicator(null);
+
+        onMethodologyChange();
+
+        setMessage(
+          `Updated "${updated.name}".`,
+        );
       }
 
       setMode("closed");
@@ -252,20 +285,31 @@ export function DimensionManager({
 
       setDimensions((current) =>
         current.filter(
-          (item) => item.id !== dimension.id,
+          (item) =>
+            item.id !== dimension.id,
         ),
       );
 
-      if (selectedDimension?.id === dimension.id) {
+      if (
+        selectedDimension?.id ===
+        dimension.id
+      ) {
         onSelectDimension(null);
         onSelectIndicator(null);
       }
 
-      if (editingDimension?.id === dimension.id) {
+      if (
+        editingDimension?.id ===
+        dimension.id
+      ) {
         resetForm();
       }
 
-      setMessage(`Deleted "${dimension.name}".`);
+      onMethodologyChange();
+
+      setMessage(
+        `Deleted "${dimension.name}".`,
+      );
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -293,18 +337,23 @@ export function DimensionManager({
         style={{
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
+          justifyContent:
+            "space-between",
           gap: "var(--aix-space-sm)",
-          marginBottom: "var(--aix-space-md)",
+          marginBottom:
+            "var(--aix-space-md)",
         }}
       >
         <div>
-          <strong>{selectedIndex.name}</strong>
+          <strong>
+            {selectedIndex.name}
+          </strong>
 
           <p
             style={{
               margin: "4px 0 0",
-              color: "var(--aix-color-text-muted)",
+              color:
+                "var(--aix-color-text-muted)",
               fontSize: "13px",
             }}
           >
@@ -323,7 +372,8 @@ export function DimensionManager({
       {message && (
         <div
           style={{
-            marginBottom: "var(--aix-space-md)",
+            marginBottom:
+              "var(--aix-space-md)",
           }}
         >
           <StatusMessage
@@ -336,7 +386,8 @@ export function DimensionManager({
       {error && (
         <div
           style={{
-            marginBottom: "var(--aix-space-md)",
+            marginBottom:
+              "var(--aix-space-md)",
           }}
         >
           <StatusMessage
@@ -353,7 +404,8 @@ export function DimensionManager({
           style={{
             display: "grid",
             gap: "var(--aix-space-md)",
-            marginBlock: "var(--aix-space-md)",
+            marginBlock:
+              "var(--aix-space-md)",
           }}
         >
           <h3 style={{ margin: 0 }}>
@@ -369,14 +421,17 @@ export function DimensionManager({
             required
             value={name}
             onChange={(event) =>
-              setName(event.target.value)
+              setName(
+                event.target.value,
+              )
             }
           />
 
           <div
             style={{
               display: "grid",
-              gap: "var(--aix-space-sm)",
+              gap:
+                "var(--aix-space-sm)",
             }}
           >
             <label htmlFor="dimension-description">
@@ -388,7 +443,9 @@ export function DimensionManager({
               rows={4}
               value={description}
               onChange={(event) =>
-                setDescription(event.target.value)
+                setDescription(
+                  event.target.value,
+                )
               }
               style={{
                 width: "100%",
@@ -412,7 +469,9 @@ export function DimensionManager({
             value={orderPosition}
             onChange={(event) =>
               setOrderPosition(
-                Number(event.target.value),
+                Number(
+                  event.target.value,
+                ),
               )
             }
           />
@@ -421,7 +480,8 @@ export function DimensionManager({
             style={{
               display: "flex",
               flexWrap: "wrap",
-              gap: "var(--aix-space-sm)",
+              gap:
+                "var(--aix-space-sm)",
             }}
           >
             <Button
@@ -462,115 +522,154 @@ export function DimensionManager({
             padding: 0,
             margin: 0,
             display: "grid",
-            gap: "var(--aix-space-sm)",
+            gap:
+              "var(--aix-space-sm)",
           }}
         >
-          {dimensions.map((dimension) => {
-            const isSelected =
-              selectedDimension?.id === dimension.id;
+          {dimensions.map(
+            (dimension) => {
+              const isSelected =
+                selectedDimension?.id ===
+                dimension.id;
 
-            return (
-              <li
-                key={dimension.id}
-                style={{
-                  padding: "var(--aix-space-sm)",
-                  border: isSelected
-                    ? "2px solid var(--aix-color-primary)"
-                    : "1px solid var(--aix-color-border)",
-                  borderRadius:
-                    "var(--aix-radius-sm)",
-                  background:
-                    "var(--aix-color-surface)",
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSelectDimension(dimension);
-                    onSelectIndicator(null);
-                  }}
+              return (
+                <li
+                  key={dimension.id}
                   style={{
-                    width: "100%",
-                    border: 0,
-                    padding: 0,
-                    textAlign: "left",
-                    background: "transparent",
-                    cursor: "pointer",
-                    color: "inherit",
+                    padding:
+                      "var(--aix-space-sm)",
+                    border: isSelected
+                      ? "2px solid var(--aix-color-primary)"
+                      : "1px solid var(--aix-color-border)",
+                    borderRadius:
+                      "var(--aix-radius-sm)",
+                    background:
+                      "var(--aix-color-surface)",
                   }}
                 >
-                  <strong>{dimension.name}</strong>
-
-                  <p
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectDimension(
+                        dimension,
+                      );
+                      onSelectIndicator(
+                        null,
+                      );
+                    }}
                     style={{
-                      margin: "4px 0",
-                      color:
-                        "var(--aix-color-text-muted)",
+                      width: "100%",
+                      border: 0,
+                      padding: 0,
+                      textAlign: "left",
+                      background:
+                        "transparent",
+                      cursor: "pointer",
+                      color: "inherit",
                     }}
                   >
-                    Position {dimension.order_position}
-                  </p>
+                    <strong>
+                      {dimension.name}
+                    </strong>
 
-                  {dimension.description && (
                     <p
                       style={{
-                        margin: "4px 0 0",
+                        margin:
+                          "4px 0",
                         color:
                           "var(--aix-color-text-muted)",
-                        fontSize: "13px",
                       }}
                     >
-                      {dimension.description}
+                      Position{" "}
+                      {
+                        dimension.order_position
+                      }
                     </p>
-                  )}
-                </button>
 
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: "var(--aix-space-sm)",
-                    marginTop: "var(--aix-space-sm)",
-                  }}
-                >
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() =>
-                      beginEdit(dimension)
-                    }
-                  >
-                    Edit
-                  </Button>
+                    {dimension.description && (
+                      <p
+                        style={{
+                          margin:
+                            "4px 0 0",
+                          color:
+                            "var(--aix-color-text-muted)",
+                          fontSize:
+                            "13px",
+                        }}
+                      >
+                        {
+                          dimension.description
+                        }
+                      </p>
+                    )}
+                  </button>
 
-                  <Button
-                    type="button"
-                    variant="danger"
-                    disabled={
-                      deletingId === dimension.id
-                    }
-                    onClick={() =>
-                      void handleDelete(dimension)
-                    }
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap:
+                        "var(--aix-space-sm)",
+                      marginTop:
+                        "var(--aix-space-sm)",
+                    }}
                   >
-                    {deletingId === dimension.id
-                      ? "Deleting…"
-                      : "Delete"}
-                  </Button>
-                </div>
-              </li>
-            );
-          })}
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() =>
+                        beginEdit(
+                          dimension,
+                        )
+                      }
+                    >
+                      Edit
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="danger"
+                      disabled={
+                        deletingId ===
+                        dimension.id
+                      }
+                      onClick={() =>
+                        void handleDelete(
+                          dimension,
+                        )
+                      }
+                    >
+                      {deletingId ===
+                      dimension.id
+                        ? "Deleting…"
+                        : "Delete"}
+                    </Button>
+                  </div>
+                </li>
+              );
+            },
+          )}
         </ul>
       )}
 
-      {selectedIndex && selectedDimension && (
+      {selectedDimension && (
         <IndicatorManager
           selectedIndex={selectedIndex}
-          selectedDimension={selectedDimension}
-          selectedIndicator={selectedIndicator}
-          methodologyVersion={methodologyVersion}
-          onSelectIndicator={onSelectIndicator}
+          selectedDimension={
+            selectedDimension
+          }
+          selectedIndicator={
+            selectedIndicator
+          }
+          methodologyVersion={
+            methodologyVersion
+          }
+          onSelectIndicator={
+            onSelectIndicator
+          }
+          onMethodologyChange={
+            onMethodologyChange
+          }
         />
       )}
     </div>

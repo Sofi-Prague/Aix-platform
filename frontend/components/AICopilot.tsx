@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import {
   createDimension,
@@ -43,15 +43,6 @@ export function AICopilot({
     useState<number | null>(null);
 
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    setDimensionSuggestions([]);
-    setIndicatorSuggestions([]);
-    setError("");
-  }, [
-    selectedIndex?.id,
-    selectedDimension?.id,
-  ]);
 
   async function handleGenerate(): Promise<void> {
     if (!selectedIndex) {

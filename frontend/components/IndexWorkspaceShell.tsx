@@ -1,19 +1,28 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { AICopilot } from "./AICopilot";
+import {
+  useCallback,
+  useState,
+  type ReactNode,
+} from "react";
 
-import type {
-  DimensionRecord,
-  IndicatorRecord,
-  IndexRecord,
+import {
+  type DimensionRecord,
+  type IndicatorRecord,
+  type IndexRecord,
 } from "../lib/api";
 
+import { AICopilot } from "./AICopilot";
 import { DimensionManager } from "./DimensionManager";
+import { PublishPanel } from "./PublishPanel";
 import { Button } from "./ui/Button";
 import { StatusMessage } from "./ui/StatusMessage";
 
-type WorkspaceTab = "tree" | "detail" | "copilot";
+type WorkspaceTab =
+  | "tree"
+  | "detail"
+  | "copilot"
+  | "publish";
 
 type IndexWorkspaceShellProps = {
   selectedIndex: IndexRecord | null;
@@ -31,6 +40,8 @@ type IndexWorkspaceShellProps = {
   ) => void;
 
   onMethodologyChange: () => void;
+
+  onIndexPublished: () => void;
 };
 
 export function IndexWorkspaceShell({
@@ -41,12 +52,15 @@ export function IndexWorkspaceShell({
   onSelectDimension,
   onSelectIndicator,
   onMethodologyChange,
+  onIndexPublished,
 }: IndexWorkspaceShellProps) {
   const [activeTab, setActiveTab] =
     useState<WorkspaceTab>("tree");
 
   const handleSelectDimension = useCallback(
-    (dimension: DimensionRecord | null): void => {
+    (
+      dimension: DimensionRecord | null,
+    ): void => {
       onSelectDimension(dimension);
 
       if (dimension) {
@@ -57,7 +71,9 @@ export function IndexWorkspaceShell({
   );
 
   const handleSelectIndicator = useCallback(
-    (indicator: IndicatorRecord | null): void => {
+    (
+      indicator: IndicatorRecord | null,
+    ): void => {
       onSelectIndicator(indicator);
 
       if (indicator) {
@@ -66,9 +82,6 @@ export function IndexWorkspaceShell({
     },
     [onSelectIndicator],
   );
-  
-
-  
 
   return (
     <section aria-label="Index workspace">
@@ -83,7 +96,9 @@ export function IndexWorkspaceShell({
               ? "primary"
               : "secondary"
           }
-          onClick={() => setActiveTab("tree")}
+          onClick={() =>
+            setActiveTab("tree")
+          }
         >
           Structure
         </Button>
@@ -95,7 +110,9 @@ export function IndexWorkspaceShell({
               ? "primary"
               : "secondary"
           }
-          onClick={() => setActiveTab("detail")}
+          onClick={() =>
+            setActiveTab("detail")
+          }
         >
           Detail
         </Button>
@@ -107,9 +124,25 @@ export function IndexWorkspaceShell({
               ? "primary"
               : "secondary"
           }
-          onClick={() => setActiveTab("copilot")}
+          onClick={() =>
+            setActiveTab("copilot")
+          }
         >
           AI Co-Pilot
+        </Button>
+
+        <Button
+          type="button"
+          variant={
+            activeTab === "publish"
+              ? "primary"
+              : "secondary"
+          }
+          onClick={() =>
+            setActiveTab("publish")
+          }
+        >
+          Publish
         </Button>
       </nav>
 
@@ -120,17 +153,32 @@ export function IndexWorkspaceShell({
         >
           <DimensionManager
             selectedIndex={selectedIndex}
-            selectedDimension={selectedDimension}
-            selectedIndicator={selectedIndicator}
-            methodologyVersion={methodologyVersion}
-            onSelectDimension={handleSelectDimension}
-            onSelectIndicator={handleSelectIndicator}
+            selectedDimension={
+              selectedDimension
+            }
+            selectedIndicator={
+              selectedIndicator
+            }
+            methodologyVersion={
+              methodologyVersion
+            }
+            onSelectDimension={
+              handleSelectDimension
+            }
+            onSelectIndicator={
+              handleSelectIndicator
+            }
+            onMethodologyChange={
+              onMethodologyChange
+            }
           />
         </Panel>
 
         <Panel
           title="Detail"
-          active={activeTab === "detail"}
+          active={
+            activeTab === "detail"
+          }
         >
           {!selectedIndex ? (
             <StatusMessage
@@ -139,54 +187,17 @@ export function IndexWorkspaceShell({
               message="Open an index before viewing methodology details."
             />
           ) : selectedIndicator ? (
-            <div>
-              <h3>{selectedIndicator.name}</h3>
-
-              <p>
-                {selectedIndicator.description ||
-                  "No description has been provided."}
-              </p>
-
-              <p>
-                <strong>Unit:</strong>{" "}
-                {selectedIndicator.unit || "Not specified"}
-              </p>
-
-              <p>
-                <strong>Directionality:</strong>{" "}
-                {selectedIndicator.directionality ===
-                "higher_is_better"
-                  ? "Higher is better"
-                  : selectedIndicator.directionality ===
-                      "lower_is_better"
-                    ? "Lower is better"
-                    : "Not specified"}
-              </p>
-
-              <p>
-                <strong>Status:</strong>{" "}
-                {selectedIndicator.status}
-              </p>
-
-              <p>
-                <strong>Order position:</strong>{" "}
-                {selectedIndicator.order_position}
-              </p>
-            </div>
+            <IndicatorDetail
+              indicator={
+                selectedIndicator
+              }
+            />
           ) : selectedDimension ? (
-            <div>
-              <h3>{selectedDimension.name}</h3>
-
-              <p>
-                {selectedDimension.description ||
-                  "No description has been provided."}
-              </p>
-
-              <p>
-                <strong>Order position:</strong>{" "}
-                {selectedDimension.order_position}
-              </p>
-            </div>
+            <DimensionDetail
+              dimension={
+                selectedDimension
+              }
+            />
           ) : (
             <StatusMessage
               type="empty"
@@ -198,18 +209,257 @@ export function IndexWorkspaceShell({
 
         <Panel
           title="AI Co-Pilot"
-          active={activeTab === "copilot"}
+          active={
+            activeTab === "copilot"
+          }
           isAiRegion
         >
           <AICopilot
-            selectedIndex={selectedIndex}
-            selectedDimension={selectedDimension}
-            onMethodologyChange={onMethodologyChange}
+            key={`${
+              selectedIndex?.id ??
+              "no-index"
+            }-${
+              selectedDimension?.id ??
+              "no-dimension"
+            }`}
+            selectedIndex={
+              selectedIndex
+            }
+            selectedDimension={
+              selectedDimension
+            }
+            onMethodologyChange={
+              onMethodologyChange
+            }
+          />
+        </Panel>
+
+        <Panel
+          title="Publish"
+          active={
+            activeTab === "publish"
+          }
+        >
+          <PublishPanel
+            key={
+              selectedIndex?.id ??
+              "no-index"
+            }
+            selectedIndex={
+              selectedIndex
+            }
+            methodologyVersion={
+              methodologyVersion
+            }
+            onPublished={
+              onIndexPublished
+            }
           />
         </Panel>
       </div>
     </section>
   );
+}
+
+function DimensionDetail({
+  dimension,
+}: {
+  dimension: DimensionRecord;
+}) {
+  return (
+    <div>
+      <h3
+        style={{
+          marginTop: 0,
+        }}
+      >
+        {dimension.name}
+      </h3>
+
+      <p>
+        {dimension.description ||
+          "No description has been provided."}
+      </p>
+
+      <dl
+        style={{
+          display: "grid",
+          gap: "var(--aix-space-md)",
+        }}
+      >
+        <div>
+          <dt
+            style={{
+              color:
+                "var(--aix-color-text-muted)",
+              fontSize: "12px",
+              textTransform:
+                "uppercase",
+            }}
+          >
+            Order position
+          </dt>
+
+          <dd
+            style={{
+              margin: "4px 0 0",
+            }}
+          >
+            {dimension.order_position}
+          </dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
+function IndicatorDetail({
+  indicator,
+}: {
+  indicator: IndicatorRecord;
+}) {
+  return (
+    <div>
+      <h3
+        style={{
+          marginTop: 0,
+        }}
+      >
+        {indicator.name}
+      </h3>
+
+      <p>
+        {indicator.description ||
+          "No description has been provided."}
+      </p>
+
+      <dl
+        style={{
+          display: "grid",
+          gap: "var(--aix-space-md)",
+        }}
+      >
+        <div>
+          <dt
+            style={{
+              color:
+                "var(--aix-color-text-muted)",
+              fontSize: "12px",
+              textTransform:
+                "uppercase",
+            }}
+          >
+            Unit
+          </dt>
+
+          <dd
+            style={{
+              margin: "4px 0 0",
+            }}
+          >
+            {indicator.unit ||
+              "Not specified"}
+          </dd>
+        </div>
+
+        <div>
+          <dt
+            style={{
+              color:
+                "var(--aix-color-text-muted)",
+              fontSize: "12px",
+              textTransform:
+                "uppercase",
+            }}
+          >
+            Directionality
+          </dt>
+
+          <dd
+            style={{
+              margin: "4px 0 0",
+            }}
+          >
+            {formatDirectionality(
+              indicator.directionality,
+            )}
+          </dd>
+        </div>
+
+        <div>
+          <dt
+            style={{
+              color:
+                "var(--aix-color-text-muted)",
+              fontSize: "12px",
+              textTransform:
+                "uppercase",
+            }}
+          >
+            Status
+          </dt>
+
+          <dd
+            style={{
+              margin: "4px 0 0",
+            }}
+          >
+            {indicator.status ===
+            "ready"
+              ? "Ready"
+              : "Draft"}
+          </dd>
+        </div>
+
+        <div>
+          <dt
+            style={{
+              color:
+                "var(--aix-color-text-muted)",
+              fontSize: "12px",
+              textTransform:
+                "uppercase",
+            }}
+          >
+            Order position
+          </dt>
+
+          <dd
+            style={{
+              margin: "4px 0 0",
+            }}
+          >
+            {
+              indicator.order_position
+            }
+          </dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
+function formatDirectionality(
+  directionality:
+    | "higher_is_better"
+    | "lower_is_better"
+    | null,
+): string {
+  if (
+    directionality ===
+    "higher_is_better"
+  ) {
+    return "Higher is better";
+  }
+
+  if (
+    directionality ===
+    "lower_is_better"
+  ) {
+    return "Lower is better";
+  }
+
+  return "Not specified";
 }
 
 function Panel({
@@ -219,7 +469,7 @@ function Panel({
   isAiRegion = false,
 }: {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
   active: boolean;
   isAiRegion?: boolean;
 }) {
@@ -240,11 +490,12 @@ function Panel({
     >
       <h2
         style={{
-          marginTop: 0,
           fontSize: "14px",
-          textTransform: "uppercase",
+          textTransform:
+            "uppercase",
           letterSpacing: "0.05em",
-          color: "var(--aix-color-text-muted)",
+          color:
+            "var(--aix-color-text-muted)",
         }}
       >
         {title}

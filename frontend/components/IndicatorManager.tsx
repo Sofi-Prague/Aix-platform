@@ -1,6 +1,10 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import {
+  FormEvent,
+  useEffect,
+  useState,
+} from "react";
 
 import {
   createIndicator,
@@ -11,6 +15,7 @@ import {
   type IndexRecord,
   updateIndicator,
 } from "../lib/api";
+
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { StatusMessage } from "./ui/StatusMessage";
@@ -20,12 +25,18 @@ type IndicatorManagerProps = {
   selectedDimension: DimensionRecord;
   selectedIndicator: IndicatorRecord | null;
   methodologyVersion: number;
+
   onSelectIndicator: (
     indicator: IndicatorRecord | null,
   ) => void;
+
+  onMethodologyChange: () => void;
 };
 
-type FormMode = "closed" | "create" | "edit";
+type FormMode =
+  | "closed"
+  | "create"
+  | "edit";
 
 type Directionality =
   | "higher_is_better"
@@ -38,35 +49,55 @@ export function IndicatorManager({
   selectedIndicator,
   methodologyVersion,
   onSelectIndicator,
+  onMethodologyChange,
 }: IndicatorManagerProps) {
-  const [indicators, setIndicators] = useState<
-    IndicatorRecord[]
-  >([]);
+  const [indicators, setIndicators] =
+    useState<IndicatorRecord[]>([]);
 
-  const [mode, setMode] = useState<FormMode>("closed");
+  const [mode, setMode] =
+    useState<FormMode>("closed");
 
-  const [editingIndicator, setEditingIndicator] =
-    useState<IndicatorRecord | null>(null);
+  const [
+    editingIndicator,
+    setEditingIndicator,
+  ] = useState<IndicatorRecord | null>(
+    null,
+  );
 
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
+  const [description, setDescription] =
+    useState("");
   const [unit, setUnit] = useState("");
-  const [directionality, setDirectionality] =
-    useState<Directionality>("");
 
-  const [indicatorStatus, setIndicatorStatus] =
-    useState<"draft" | "ready">("draft");
+  const [
+    directionality,
+    setDirectionality,
+  ] = useState<Directionality>("");
 
-  const [orderPosition, setOrderPosition] = useState(0);
+  const [
+    indicatorStatus,
+    setIndicatorStatus,
+  ] = useState<"draft" | "ready">(
+    "draft",
+  );
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [
+    orderPosition,
+    setOrderPosition,
+  ] = useState(0);
+
+  const [isLoading, setIsLoading] =
+    useState(false);
+
+  const [isSaving, setIsSaving] =
+    useState(false);
 
   const [deletingId, setDeletingId] =
     useState<string | null>(null);
 
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] =
+    useState("");
 
   useEffect(() => {
     async function loadIndicators(): Promise<void> {
@@ -77,10 +108,11 @@ export function IndicatorManager({
       setEditingIndicator(null);
 
       try {
-        const result = await getIndicators(
-          selectedIndex.slug,
-          selectedDimension.id,
-        );
+        const result =
+          await getIndicators(
+            selectedIndex.slug,
+            selectedDimension.id,
+          );
 
         setIndicators(result);
       } catch (caughtError) {
@@ -94,12 +126,12 @@ export function IndicatorManager({
       }
     }
 
-    void loadIndicators(); 
-    }, [
-      selectedIndex.slug,
-      selectedDimension.id,
-      methodologyVersion,
-    ]);
+    void loadIndicators();
+  }, [
+    selectedIndex.slug,
+    selectedDimension.id,
+    methodologyVersion,
+  ]);
 
   function resetForm(): void {
     setMode("closed");
@@ -119,7 +151,8 @@ export function IndicatorManager({
         ? 0
         : Math.max(
             ...indicators.map(
-              (indicator) => indicator.order_position,
+              (indicator) =>
+                indicator.order_position,
             ),
           ) + 1;
 
@@ -139,19 +172,38 @@ export function IndicatorManager({
     indicator: IndicatorRecord,
   ): void {
     setEditingIndicator(indicator);
-    setName(indicator.name);
-    setDescription(indicator.description ?? "");
-    setUnit(indicator.unit ?? "");
+
+    setName(
+      indicator.name,
+    );
+
+    setDescription(
+      indicator.description ?? "",
+    );
+
+    setUnit(
+      indicator.unit ?? "",
+    );
+
     setDirectionality(
       indicator.directionality ?? "",
     );
-    setIndicatorStatus(indicator.status);
-    setOrderPosition(indicator.order_position);
+
+    setIndicatorStatus(
+      indicator.status,
+    );
+
+    setOrderPosition(
+      indicator.order_position,
+    );
+
     setError("");
     setMessage("");
     setMode("edit");
 
-    onSelectIndicator(indicator);
+    onSelectIndicator(
+      indicator,
+    );
   }
 
   async function handleSubmit(
@@ -165,21 +217,26 @@ export function IndicatorManager({
 
     try {
       if (mode === "create") {
-        const created = await createIndicator(
-          selectedIndex.slug,
-          selectedDimension.id,
-          {
-            name,
-            description: description || null,
-            unit: unit || null,
-            directionality:
-              directionality === ""
-                ? null
-                : directionality,
-            status: indicatorStatus,
-            order_position: orderPosition,
-          },
-        );
+        const created =
+          await createIndicator(
+            selectedIndex.slug,
+            selectedDimension.id,
+            {
+              name,
+              description:
+                description || null,
+              unit:
+                unit || null,
+              directionality:
+                directionality === ""
+                  ? null
+                  : directionality,
+              status:
+                indicatorStatus,
+              order_position:
+                orderPosition,
+            },
+          );
 
         setIndicators((current) =>
           [...current, created].sort(
@@ -189,35 +246,48 @@ export function IndicatorManager({
           ),
         );
 
-        onSelectIndicator(created);
-        setMessage(`Created "${created.name}".`);
+        onSelectIndicator(
+          created,
+        );
+
+        onMethodologyChange();
+
+        setMessage(
+          `Created "${created.name}".`,
+        );
       }
 
       if (
         mode === "edit" &&
         editingIndicator
       ) {
-        const updated = await updateIndicator(
-          selectedIndex.slug,
-          selectedDimension.id,
-          editingIndicator.id,
-          {
-            name,
-            description: description || null,
-            unit: unit || null,
-            directionality:
-              directionality === ""
-                ? null
-                : directionality,
-            status: indicatorStatus,
-            order_position: orderPosition,
-          },
-        );
+        const updated =
+          await updateIndicator(
+            selectedIndex.slug,
+            selectedDimension.id,
+            editingIndicator.id,
+            {
+              name,
+              description:
+                description || null,
+              unit:
+                unit || null,
+              directionality:
+                directionality === ""
+                  ? null
+                  : directionality,
+              status:
+                indicatorStatus,
+              order_position:
+                orderPosition,
+            },
+          );
 
         setIndicators((current) =>
           current
             .map((indicator) =>
-              indicator.id === updated.id
+              indicator.id ===
+              updated.id
                 ? updated
                 : indicator,
             )
@@ -228,8 +298,15 @@ export function IndicatorManager({
             ),
         );
 
-        onSelectIndicator(updated);
-        setMessage(`Updated "${updated.name}".`);
+        onSelectIndicator(
+          updated,
+        );
+
+        onMethodologyChange();
+
+        setMessage(
+          `Updated "${updated.name}".`,
+        );
       }
 
       resetForm();
@@ -255,7 +332,10 @@ export function IndicatorManager({
       return;
     }
 
-    setDeletingId(indicator.id);
+    setDeletingId(
+      indicator.id,
+    );
+
     setError("");
     setMessage("");
 
@@ -268,19 +348,33 @@ export function IndicatorManager({
 
       setIndicators((current) =>
         current.filter(
-          (item) => item.id !== indicator.id,
+          (item) =>
+            item.id !==
+            indicator.id,
         ),
       );
 
-      if (selectedIndicator?.id === indicator.id) {
-        onSelectIndicator(null);
+      if (
+        selectedIndicator?.id ===
+        indicator.id
+      ) {
+        onSelectIndicator(
+          null,
+        );
       }
 
-      if (editingIndicator?.id === indicator.id) {
+      if (
+        editingIndicator?.id ===
+        indicator.id
+      ) {
         resetForm();
       }
 
-      setMessage(`Deleted "${indicator.name}".`);
+      onMethodologyChange();
+
+      setMessage(
+        `Deleted "${indicator.name}".`,
+      );
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -288,7 +382,9 @@ export function IndicatorManager({
           : "Unable to delete the indicator.",
       );
     } finally {
-      setDeletingId(null);
+      setDeletingId(
+        null,
+      );
     }
   }
 
@@ -296,8 +392,10 @@ export function IndicatorManager({
     <section
       aria-labelledby="indicator-manager-heading"
       style={{
-        marginTop: "var(--aix-space-lg)",
-        paddingTop: "var(--aix-space-md)",
+        marginTop:
+          "var(--aix-space-lg)",
+        paddingTop:
+          "var(--aix-space-md)",
         borderTop:
           "1px solid var(--aix-color-border)",
       }}
@@ -305,10 +403,13 @@ export function IndicatorManager({
       <div
         style={{
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent:
+            "space-between",
           alignItems: "center",
-          gap: "var(--aix-space-sm)",
-          marginBottom: "var(--aix-space-md)",
+          gap:
+            "var(--aix-space-sm)",
+          marginBottom:
+            "var(--aix-space-md)",
         }}
       >
         <div>
@@ -325,11 +426,14 @@ export function IndicatorManager({
           <p
             style={{
               margin: "4px 0 0",
-              color: "var(--aix-color-text-muted)",
+              color:
+                "var(--aix-color-text-muted)",
               fontSize: "13px",
             }}
           >
-            {selectedDimension.name}
+            {
+              selectedDimension.name
+            }
           </p>
         </div>
 
@@ -344,7 +448,8 @@ export function IndicatorManager({
       {message && (
         <div
           style={{
-            marginBottom: "var(--aix-space-md)",
+            marginBottom:
+              "var(--aix-space-md)",
           }}
         >
           <StatusMessage
@@ -357,7 +462,8 @@ export function IndicatorManager({
       {error && (
         <div
           style={{
-            marginBottom: "var(--aix-space-md)",
+            marginBottom:
+              "var(--aix-space-md)",
           }}
         >
           <StatusMessage
@@ -370,14 +476,22 @@ export function IndicatorManager({
 
       {mode !== "closed" && (
         <form
-          onSubmit={handleSubmit}
+          onSubmit={
+            handleSubmit
+          }
           style={{
             display: "grid",
-            gap: "var(--aix-space-md)",
-            marginBottom: "var(--aix-space-lg)",
+            gap:
+              "var(--aix-space-md)",
+            marginBottom:
+              "var(--aix-space-lg)",
           }}
         >
-          <h4 style={{ margin: 0 }}>
+          <h4
+            style={{
+              margin: 0,
+            }}
+          >
             {mode === "create"
               ? "Create indicator"
               : "Edit indicator"}
@@ -390,14 +504,17 @@ export function IndicatorManager({
             required
             value={name}
             onChange={(event) =>
-              setName(event.target.value)
+              setName(
+                event.target.value,
+              )
             }
           />
 
           <div
             style={{
               display: "grid",
-              gap: "var(--aix-space-sm)",
+              gap:
+                "var(--aix-space-sm)",
             }}
           >
             <label htmlFor="indicator-description">
@@ -407,19 +524,25 @@ export function IndicatorManager({
             <textarea
               id="indicator-description"
               rows={4}
-              value={description}
+              value={
+                description
+              }
               onChange={(event) =>
-                setDescription(event.target.value)
+                setDescription(
+                  event.target.value,
+                )
               }
               style={{
                 width: "100%",
-                padding: "10px 12px",
+                padding:
+                  "10px 12px",
                 border:
                   "1px solid var(--aix-color-border)",
                 borderRadius:
                   "var(--aix-radius-sm)",
                 font: "inherit",
-                resize: "vertical",
+                resize:
+                  "vertical",
               }}
             />
           </div>
@@ -430,14 +553,17 @@ export function IndicatorManager({
             label="Unit"
             value={unit}
             onChange={(event) =>
-              setUnit(event.target.value)
+              setUnit(
+                event.target.value,
+              )
             }
           />
 
           <div
             style={{
               display: "grid",
-              gap: "var(--aix-space-sm)",
+              gap:
+                "var(--aix-space-sm)",
             }}
           >
             <label htmlFor="indicator-directionality">
@@ -446,22 +572,28 @@ export function IndicatorManager({
 
             <select
               id="indicator-directionality"
-              value={directionality}
+              value={
+                directionality
+              }
               onChange={(event) =>
                 setDirectionality(
-                  event.target.value as Directionality,
+                  event.target
+                    .value as Directionality,
                 )
               }
               style={{
-                minHeight: "42px",
-                padding: "10px 12px",
+                minHeight:
+                  "42px",
+                padding:
+                  "10px 12px",
                 border:
                   "1px solid var(--aix-color-border)",
                 borderRadius:
                   "var(--aix-radius-sm)",
                 background:
                   "var(--aix-color-surface)",
-                color: "var(--aix-color-text)",
+                color:
+                  "var(--aix-color-text)",
                 font: "inherit",
               }}
             >
@@ -482,7 +614,8 @@ export function IndicatorManager({
           <div
             style={{
               display: "grid",
-              gap: "var(--aix-space-sm)",
+              gap:
+                "var(--aix-space-sm)",
             }}
           >
             <label htmlFor="indicator-status">
@@ -491,29 +624,40 @@ export function IndicatorManager({
 
             <select
               id="indicator-status"
-              value={indicatorStatus}
+              value={
+                indicatorStatus
+              }
               onChange={(event) =>
                 setIndicatorStatus(
-                  event.target.value as
+                  event.target
+                    .value as
                     | "draft"
                     | "ready",
                 )
               }
               style={{
-                minHeight: "42px",
-                padding: "10px 12px",
+                minHeight:
+                  "42px",
+                padding:
+                  "10px 12px",
                 border:
                   "1px solid var(--aix-color-border)",
                 borderRadius:
                   "var(--aix-radius-sm)",
                 background:
                   "var(--aix-color-surface)",
-                color: "var(--aix-color-text)",
+                color:
+                  "var(--aix-color-text)",
                 font: "inherit",
               }}
             >
-              <option value="draft">Draft</option>
-              <option value="ready">Ready</option>
+              <option value="draft">
+                Draft
+              </option>
+
+              <option value="ready">
+                Ready
+              </option>
             </select>
           </div>
 
@@ -523,10 +667,14 @@ export function IndicatorManager({
             label="Order position"
             type="number"
             min={0}
-            value={orderPosition}
+            value={
+              orderPosition
+            }
             onChange={(event) =>
               setOrderPosition(
-                Number(event.target.value),
+                Number(
+                  event.target.value,
+                ),
               )
             }
           />
@@ -534,13 +682,17 @@ export function IndicatorManager({
           <div
             style={{
               display: "flex",
-              flexWrap: "wrap",
-              gap: "var(--aix-space-sm)",
+              flexWrap:
+                "wrap",
+              gap:
+                "var(--aix-space-sm)",
             }}
           >
             <Button
               type="submit"
-              isLoading={isSaving}
+              isLoading={
+                isSaving
+              }
             >
               {mode === "create"
                 ? "Create indicator"
@@ -550,7 +702,9 @@ export function IndicatorManager({
             <Button
               type="button"
               variant="secondary"
-              onClick={resetForm}
+              onClick={
+                resetForm
+              }
             >
               Cancel
             </Button>
@@ -563,7 +717,8 @@ export function IndicatorManager({
           type="loading"
           title="Loading indicators…"
         />
-      ) : indicators.length === 0 ? (
+      ) : indicators.length ===
+        0 ? (
         <StatusMessage
           type="empty"
           title="No indicators yet"
@@ -576,111 +731,146 @@ export function IndicatorManager({
             padding: 0,
             margin: 0,
             display: "grid",
-            gap: "var(--aix-space-sm)",
+            gap:
+              "var(--aix-space-sm)",
           }}
         >
-          {indicators.map((indicator) => {
-            const isSelected =
-              selectedIndicator?.id === indicator.id;
+          {indicators.map(
+            (indicator) => {
+              const isSelected =
+                selectedIndicator?.id ===
+                indicator.id;
 
-            return (
-              <li
-                key={indicator.id}
-                style={{
-                  padding: "var(--aix-space-sm)",
-                  border: isSelected
-                    ? "2px solid var(--aix-color-primary)"
-                    : "1px solid var(--aix-color-border)",
-                  borderRadius:
-                    "var(--aix-radius-sm)",
-                  background:
-                    "var(--aix-color-surface)",
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() =>
-                    onSelectIndicator(indicator)
+              return (
+                <li
+                  key={
+                    indicator.id
                   }
                   style={{
-                    width: "100%",
-                    border: 0,
-                    padding: 0,
-                    textAlign: "left",
-                    background: "transparent",
-                    cursor: "pointer",
-                    color: "inherit",
+                    padding:
+                      "var(--aix-space-sm)",
+                    border:
+                      isSelected
+                        ? "2px solid var(--aix-color-primary)"
+                        : "1px solid var(--aix-color-border)",
+                    borderRadius:
+                      "var(--aix-radius-sm)",
+                    background:
+                      "var(--aix-color-surface)",
                   }}
                 >
-                  <strong>{indicator.name}</strong>
-
-                  <p
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onSelectIndicator(
+                        indicator,
+                      )
+                    }
                     style={{
-                      margin: "4px 0",
+                      width: "100%",
+                      border: 0,
+                      padding: 0,
+                      textAlign:
+                        "left",
+                      background:
+                        "transparent",
+                      cursor:
+                        "pointer",
                       color:
-                        "var(--aix-color-text-muted)",
-                      fontSize: "13px",
+                        "inherit",
                     }}
                   >
-                    {indicator.status}
-                    {indicator.unit
-                      ? ` · ${indicator.unit}`
-                      : ""}
-                  </p>
+                    <strong>
+                      {
+                        indicator.name
+                      }
+                    </strong>
 
-                  {indicator.directionality && (
                     <p
                       style={{
-                        margin: 0,
+                        margin:
+                          "4px 0",
                         color:
                           "var(--aix-color-text-muted)",
-                        fontSize: "13px",
+                        fontSize:
+                          "13px",
                       }}
                     >
-                      {indicator.directionality ===
-                      "higher_is_better"
-                        ? "Higher is better"
-                        : "Lower is better"}
+                      {
+                        indicator.status
+                      }
+
+                      {indicator.unit
+                        ? ` · ${indicator.unit}`
+                        : ""}
                     </p>
-                  )}
-                </button>
 
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: "var(--aix-space-sm)",
-                    marginTop: "var(--aix-space-sm)",
-                  }}
-                >
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() =>
-                      beginEdit(indicator)
-                    }
-                  >
-                    Edit
-                  </Button>
+                    {indicator.directionality && (
+                      <p
+                        style={{
+                          margin:
+                            0,
+                          color:
+                            "var(--aix-color-text-muted)",
+                          fontSize:
+                            "13px",
+                        }}
+                      >
+                        {indicator.directionality ===
+                        "higher_is_better"
+                          ? "Higher is better"
+                          : "Lower is better"}
+                      </p>
+                    )}
+                  </button>
 
-                  <Button
-                    type="button"
-                    variant="danger"
-                    disabled={
-                      deletingId === indicator.id
-                    }
-                    onClick={() =>
-                      void handleDelete(indicator)
-                    }
+                  <div
+                    style={{
+                      display:
+                        "flex",
+                      flexWrap:
+                        "wrap",
+                      gap:
+                        "var(--aix-space-sm)",
+                      marginTop:
+                        "var(--aix-space-sm)",
+                    }}
                   >
-                    {deletingId === indicator.id
-                      ? "Deleting…"
-                      : "Delete"}
-                  </Button>
-                </div>
-              </li>
-            );
-          })}
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() =>
+                        beginEdit(
+                          indicator,
+                        )
+                      }
+                    >
+                      Edit
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="danger"
+                      disabled={
+                        deletingId ===
+                        indicator.id
+                      }
+                      onClick={() =>
+                        void handleDelete(
+                          indicator,
+                        )
+                      }
+                    >
+                      {deletingId ===
+                      indicator.id
+                        ? "Deleting…"
+                        : "Delete"}
+                    </Button>
+                  </div>
+                </li>
+              );
+            },
+          )}
         </ul>
       )}
     </section>

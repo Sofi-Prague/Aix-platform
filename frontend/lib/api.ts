@@ -91,6 +91,55 @@ export type IndicatorSuggestionResponse = {
   suggestions: IndicatorSuggestion[];
 };
 
+export type PublishChecklistItem = {
+  key: string;
+  label: string;
+  passed: boolean;
+  detail: string | null;
+};
+
+export type PublishValidationResponse = {
+  index_slug: string;
+  current_status: string;
+  can_publish: boolean;
+  checklist: PublishChecklistItem[];
+};
+
+export type PublishResponse = {
+  index_slug: string;
+  status: string;
+  message: string;
+};
+
+export type PublicIndicatorRecord = {
+  id: string;
+  name: string;
+  description: string | null;
+  unit: string | null;
+  directionality:
+    | "higher_is_better"
+    | "lower_is_better"
+    | null;
+  order_position: number;
+};
+
+export type PublicDimensionRecord = {
+  id: string;
+  name: string;
+  description: string | null;
+  order_position: number;
+  indicators: PublicIndicatorRecord[];
+};
+
+export type PublicIndexRecord = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  status: string;
+  dimensions: PublicDimensionRecord[];
+};
+
 async function request<T>(
   path: string,
   options: RequestInit = {},
@@ -361,4 +410,63 @@ export function suggestIndicators(
       method: "POST",
     },
   );
+}
+
+export function validateIndexForPublish(
+  indexSlug: string,
+): Promise<PublishValidationResponse> {
+  return request<PublishValidationResponse>(
+    `/publish/indexes/${encodeURIComponent(
+      indexSlug,
+    )}/validate`,
+  );
+}
+
+export function publishIndex(
+  indexSlug: string,
+): Promise<PublishResponse> {
+  return request<PublishResponse>(
+    `/publish/indexes/${encodeURIComponent(
+      indexSlug,
+    )}`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export async function getPublishedIndex(
+  indexSlug: string,
+): Promise<PublicIndexRecord> {
+  const response = await fetch(
+    `${API_URL}/publish/indexes/${encodeURIComponent(
+      indexSlug,
+    )}/public`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
+  if (!response.ok) {
+    let message = "Published index not found";
+
+    try {
+      const body = (await response.json()) as {
+        detail?: string;
+      };
+
+      if (body.detail) {
+        message = body.detail;
+      }
+    } catch {
+      // Keep fallback.
+    }
+
+    throw new Error(message);
+  }
+
+  return response.json() as Promise<PublicIndexRecord>;
 }

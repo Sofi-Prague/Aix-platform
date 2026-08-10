@@ -8,6 +8,7 @@ import {
   type IndexRecord,
   updateIndex,
 } from "../lib/api";
+
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { StatusMessage } from "./ui/StatusMessage";
@@ -15,8 +16,16 @@ import { StatusMessage } from "./ui/StatusMessage";
 type IndexManagerProps = {
   indexes: IndexRecord[];
   selectedIndex: IndexRecord | null;
-  onIndexesChange: (indexes: IndexRecord[]) => void;
-  onSelectIndex: (index: IndexRecord | null) => void;
+
+  onIndexesChange: (
+    indexes: IndexRecord[],
+  ) => void;
+
+  onSelectIndex: (
+    index: IndexRecord | null,
+  ) => void;
+
+  onMethodologyChange: () => void;
 };
 
 type EditorMode = "closed" | "create" | "edit";
@@ -35,20 +44,28 @@ export function IndexManager({
   selectedIndex,
   onIndexesChange,
   onSelectIndex,
+  onMethodologyChange,
 }: IndexManagerProps) {
-  const [mode, setMode] = useState<EditorMode>("closed");
+  const [mode, setMode] =
+    useState<EditorMode>("closed");
+
   const [editingIndex, setEditingIndex] =
     useState<IndexRecord | null>(null);
 
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
-  const [description, setDescription] = useState("");
+  const [description, setDescription] =
+    useState("");
+
   const [status, setStatus] =
     useState<IndexRecord["status"]>("draft");
 
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
+
+  const [isSaving, setIsSaving] =
+    useState(false);
+
   const [deletingSlug, setDeletingSlug] =
     useState<string | null>(null);
 
@@ -68,18 +85,24 @@ export function IndexManager({
     setMode("create");
   }
 
-  function beginEdit(index: IndexRecord): void {
+  function beginEdit(
+    index: IndexRecord,
+  ): void {
     setEditingIndex(index);
     setName(index.name);
     setSlug(index.slug);
-    setDescription(index.description ?? "");
+    setDescription(
+      index.description ?? "",
+    );
     setStatus(index.status);
     setError("");
     setMessage("");
     setMode("edit");
   }
 
-  function handleNameChange(value: string): void {
+  function handleNameChange(
+    value: string,
+  ): void {
     setName(value);
 
     if (mode === "create") {
@@ -101,36 +124,60 @@ export function IndexManager({
         const created = await createIndex({
           name,
           slug,
-          description: description || null,
+          description:
+            description || null,
         });
 
-        onIndexesChange([created, ...indexes]);
+        onIndexesChange([
+          created,
+          ...indexes,
+        ]);
+
         onSelectIndex(created);
-        setMessage(`Created "${created.name}".`);
+
+        onMethodologyChange();
+
+        setMessage(
+          `Created "${created.name}".`,
+        );
       }
 
-      if (mode === "edit" && editingIndex) {
-        const updated = await updateIndex(
-          editingIndex.slug,
-          {
-            name,
-            slug,
-            description: description || null,
-            status,
-          },
-        );
+      if (
+        mode === "edit" &&
+        editingIndex
+      ) {
+        const updated =
+          await updateIndex(
+            editingIndex.slug,
+            {
+              name,
+              slug,
+              description:
+                description || null,
+              status,
+            },
+          );
 
         onIndexesChange(
           indexes.map((index) =>
-            index.id === updated.id ? updated : index,
+            index.id === updated.id
+              ? updated
+              : index,
           ),
         );
 
-        if (selectedIndex?.id === updated.id) {
+        if (
+          selectedIndex?.id ===
+          updated.id
+        ) {
           onSelectIndex(updated);
         }
 
-        setMessage(`Updated "${updated.name}".`);
+        onMethodologyChange();
+
+        setMessage(
+          `Updated "${updated.name}".`,
+        );
       }
 
       resetForm();
@@ -164,18 +211,29 @@ export function IndexManager({
       await deleteIndex(index.slug);
 
       onIndexesChange(
-        indexes.filter((item) => item.id !== index.id),
+        indexes.filter(
+          (item) =>
+            item.id !== index.id,
+        ),
       );
 
-      if (selectedIndex?.id === index.id) {
+      if (
+        selectedIndex?.id === index.id
+      ) {
         onSelectIndex(null);
       }
 
-      if (editingIndex?.id === index.id) {
+      if (
+        editingIndex?.id === index.id
+      ) {
         resetForm();
       }
 
-      setMessage(`Deleted "${index.name}".`);
+      onMethodologyChange();
+
+      setMessage(
+        `Deleted "${index.name}".`,
+      );
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -191,17 +249,22 @@ export function IndexManager({
     <section
       aria-labelledby="index-manager-heading"
       style={{
-        padding: "var(--aix-space-lg)",
-        borderBottom: "1px solid var(--aix-color-border)",
+        padding:
+          "var(--aix-space-lg)",
+        borderBottom:
+          "1px solid var(--aix-color-border)",
       }}
     >
       <div
         style={{
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent:
+            "space-between",
           alignItems: "center",
-          gap: "var(--aix-space-md)",
-          marginBottom: "var(--aix-space-md)",
+          gap:
+            "var(--aix-space-md)",
+          marginBottom:
+            "var(--aix-space-md)",
         }}
       >
         <h1
@@ -223,7 +286,12 @@ export function IndexManager({
       </div>
 
       {message && (
-        <div style={{ marginBottom: "var(--aix-space-md)" }}>
+        <div
+          style={{
+            marginBottom:
+              "var(--aix-space-md)",
+          }}
+        >
           <StatusMessage
             type="success"
             title={message}
@@ -232,7 +300,12 @@ export function IndexManager({
       )}
 
       {error && (
-        <div style={{ marginBottom: "var(--aix-space-md)" }}>
+        <div
+          style={{
+            marginBottom:
+              "var(--aix-space-md)",
+          }}
+        >
           <StatusMessage
             type="error"
             title="Index operation failed"
@@ -246,12 +319,18 @@ export function IndexManager({
           onSubmit={handleSubmit}
           style={{
             display: "grid",
-            gap: "var(--aix-space-md)",
+            gap:
+              "var(--aix-space-md)",
             maxWidth: "620px",
-            marginBlock: "var(--aix-space-lg)",
+            marginBlock:
+              "var(--aix-space-lg)",
           }}
         >
-          <h2 style={{ margin: 0 }}>
+          <h2
+            style={{
+              margin: 0,
+            }}
+          >
             {mode === "create"
               ? "Create index"
               : "Edit index"}
@@ -264,7 +343,9 @@ export function IndexManager({
             required
             value={name}
             onChange={(event) =>
-              handleNameChange(event.target.value)
+              handleNameChange(
+                event.target.value,
+              )
             }
           />
 
@@ -276,14 +357,17 @@ export function IndexManager({
             pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
             value={slug}
             onChange={(event) =>
-              setSlug(event.target.value)
+              setSlug(
+                event.target.value,
+              )
             }
           />
 
           <div
             style={{
               display: "grid",
-              gap: "var(--aix-space-sm)",
+              gap:
+                "var(--aix-space-sm)",
             }}
           >
             <label htmlFor="index-description">
@@ -294,7 +378,9 @@ export function IndexManager({
               id="index-description"
               value={description}
               onChange={(event) =>
-                setDescription(event.target.value)
+                setDescription(
+                  event.target.value,
+                )
               }
               rows={4}
               style={{
@@ -314,7 +400,8 @@ export function IndexManager({
             <div
               style={{
                 display: "grid",
-                gap: "var(--aix-space-sm)",
+                gap:
+                  "var(--aix-space-sm)",
               }}
             >
               <label htmlFor="index-status">
@@ -332,7 +419,8 @@ export function IndexManager({
                 }
                 style={{
                   minHeight: "42px",
-                  padding: "10px 12px",
+                  padding:
+                    "10px 12px",
                   border:
                     "1px solid var(--aix-color-border)",
                   borderRadius:
@@ -347,9 +435,11 @@ export function IndexManager({
                 <option value="draft">
                   Draft
                 </option>
+
                 <option value="published">
                   Published
                 </option>
+
                 <option value="archived">
                   Archived
                 </option>
@@ -361,7 +451,8 @@ export function IndexManager({
             style={{
               display: "flex",
               flexWrap: "wrap",
-              gap: "var(--aix-space-sm)",
+              gap:
+                "var(--aix-space-sm)",
             }}
           >
             <Button
@@ -394,7 +485,8 @@ export function IndexManager({
         <ul
           style={{
             display: "grid",
-            gap: "var(--aix-space-sm)",
+            gap:
+              "var(--aix-space-sm)",
             padding: 0,
             margin: 0,
             listStyle: "none",
@@ -402,17 +494,21 @@ export function IndexManager({
         >
           {indexes.map((index) => {
             const isSelected =
-              selectedIndex?.id === index.id;
+              selectedIndex?.id ===
+              index.id;
 
             return (
               <li
                 key={index.id}
                 style={{
                   display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
+                  justifyContent:
+                    "space-between",
+                  alignItems:
+                    "center",
                   flexWrap: "wrap",
-                  gap: "var(--aix-space-md)",
+                  gap:
+                    "var(--aix-space-md)",
                   padding:
                     "var(--aix-space-md)",
                   border: isSelected
@@ -425,16 +521,20 @@ export function IndexManager({
                 }}
               >
                 <div>
-                  <strong>{index.name}</strong>
+                  <strong>
+                    {index.name}
+                  </strong>
 
                   <p
                     style={{
-                      margin: "4px 0 0",
+                      margin:
+                        "4px 0 0",
                       color:
                         "var(--aix-color-text-muted)",
                     }}
                   >
-                    {index.slug} · {index.status}
+                    {index.slug} ·{" "}
+                    {index.status}
                   </p>
 
                   {index.description && (
@@ -444,10 +544,13 @@ export function IndexManager({
                           "var(--aix-space-sm) 0 0",
                         color:
                           "var(--aix-color-text-muted)",
-                        maxWidth: "600px",
+                        maxWidth:
+                          "600px",
                       }}
                     >
-                      {index.description}
+                      {
+                        index.description
+                      }
                     </p>
                   )}
                 </div>
@@ -455,8 +558,10 @@ export function IndexManager({
                 <div
                   style={{
                     display: "flex",
-                    flexWrap: "wrap",
-                    gap: "var(--aix-space-sm)",
+                    flexWrap:
+                      "wrap",
+                    gap:
+                      "var(--aix-space-sm)",
                   }}
                 >
                   <Button
@@ -467,7 +572,9 @@ export function IndexManager({
                         : "secondary"
                     }
                     onClick={() =>
-                      onSelectIndex(index)
+                      onSelectIndex(
+                        index,
+                      )
                     }
                   >
                     {isSelected
@@ -479,7 +586,9 @@ export function IndexManager({
                     type="button"
                     variant="secondary"
                     onClick={() =>
-                      beginEdit(index)
+                      beginEdit(
+                        index,
+                      )
                     }
                   >
                     Edit
@@ -489,13 +598,17 @@ export function IndexManager({
                     type="button"
                     variant="danger"
                     disabled={
-                      deletingSlug === index.slug
+                      deletingSlug ===
+                      index.slug
                     }
                     onClick={() =>
-                      void handleDelete(index)
+                      void handleDelete(
+                        index,
+                      )
                     }
                   >
-                    {deletingSlug === index.slug
+                    {deletingSlug ===
+                    index.slug
                       ? "Deleting…"
                       : "Delete"}
                   </Button>
