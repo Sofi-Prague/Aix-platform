@@ -10,6 +10,7 @@ from app.modules.ai_orchestration.router import router as ai_router
 from app.modules.publishing.router import router as publishing_router
 from app.modules.notifications.router import router as notifications_router
 from app.modules.analytics_audit.router import router as audit_router
+from app.modules.ai_orchestration.router import router as ai_router
 
 app = FastAPI(title=settings.app_name)
 

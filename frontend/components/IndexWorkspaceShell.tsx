@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { AICopilot } from "./AICopilot";
 
 import type {
   DimensionRecord,
@@ -18,20 +19,28 @@ type IndexWorkspaceShellProps = {
   selectedIndex: IndexRecord | null;
   selectedDimension: DimensionRecord | null;
   selectedIndicator: IndicatorRecord | null;
+
+  methodologyVersion: number;
+
   onSelectDimension: (
     dimension: DimensionRecord | null,
   ) => void;
+
   onSelectIndicator: (
     indicator: IndicatorRecord | null,
   ) => void;
+
+  onMethodologyChange: () => void;
 };
 
 export function IndexWorkspaceShell({
   selectedIndex,
   selectedDimension,
   selectedIndicator,
+  methodologyVersion,
   onSelectDimension,
   onSelectIndicator,
+  onMethodologyChange,
 }: IndexWorkspaceShellProps) {
   const [activeTab, setActiveTab] =
     useState<WorkspaceTab>("tree");
@@ -113,6 +122,7 @@ export function IndexWorkspaceShell({
             selectedIndex={selectedIndex}
             selectedDimension={selectedDimension}
             selectedIndicator={selectedIndicator}
+            methodologyVersion={methodologyVersion}
             onSelectDimension={handleSelectDimension}
             onSelectIndicator={handleSelectIndicator}
           />
@@ -191,25 +201,11 @@ export function IndexWorkspaceShell({
           active={activeTab === "copilot"}
           isAiRegion
         >
-          {selectedIndicator ? (
-            <StatusMessage
-              type="empty"
-              title={`No suggestions for ${selectedIndicator.name}`}
-              message="AI suggestions for indicator definitions and data sources will appear here later."
-            />
-          ) : selectedDimension ? (
-            <StatusMessage
-              type="empty"
-              title={`No suggestions for ${selectedDimension.name}`}
-              message="AI-generated indicator suggestions will appear here later."
-            />
-          ) : (
-            <StatusMessage
-              type="empty"
-              title="No suggestions yet"
-              message="Select a dimension or indicator to provide context."
-            />
-          )}
+          <AICopilot
+            selectedIndex={selectedIndex}
+            selectedDimension={selectedDimension}
+            onMethodologyChange={onMethodologyChange}
+          />
         </Panel>
       </div>
     </section>

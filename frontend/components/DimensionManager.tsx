@@ -21,9 +21,13 @@ type DimensionManagerProps = {
   selectedIndex: IndexRecord | null;
   selectedDimension: DimensionRecord | null;
   selectedIndicator: IndicatorRecord | null;
+
+  methodologyVersion: number;
+
   onSelectDimension: (
     dimension: DimensionRecord | null,
   ) => void;
+
   onSelectIndicator: (
     indicator: IndicatorRecord | null,
   ) => void;
@@ -35,6 +39,7 @@ export function DimensionManager({
   selectedIndex,
   selectedDimension,
   selectedIndicator,
+  methodologyVersion,
   onSelectDimension,
   onSelectIndicator,
 }: DimensionManagerProps) {
@@ -93,7 +98,7 @@ export function DimensionManager({
     }
 
     void loadDimensions();
-  }, [selectedIndex]);
+  }, [selectedIndex, methodologyVersion]);
 
   function resetForm(): void {
     setMode("closed");
@@ -564,6 +569,7 @@ export function DimensionManager({
           selectedIndex={selectedIndex}
           selectedDimension={selectedDimension}
           selectedIndicator={selectedIndicator}
+          methodologyVersion={methodologyVersion}
           onSelectIndicator={onSelectIndicator}
         />
       )}

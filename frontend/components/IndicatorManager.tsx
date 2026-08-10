@@ -19,6 +19,7 @@ type IndicatorManagerProps = {
   selectedIndex: IndexRecord;
   selectedDimension: DimensionRecord;
   selectedIndicator: IndicatorRecord | null;
+  methodologyVersion: number;
   onSelectIndicator: (
     indicator: IndicatorRecord | null,
   ) => void;
@@ -35,6 +36,7 @@ export function IndicatorManager({
   selectedIndex,
   selectedDimension,
   selectedIndicator,
+  methodologyVersion,
   onSelectIndicator,
 }: IndicatorManagerProps) {
   const [indicators, setIndicators] = useState<
@@ -92,8 +94,12 @@ export function IndicatorManager({
       }
     }
 
-    void loadIndicators();
-  }, [selectedIndex.slug, selectedDimension.id]);
+    void loadIndicators(); 
+    }, [
+      selectedIndex.slug,
+      selectedDimension.id,
+      methodologyVersion,
+    ]);
 
   function resetForm(): void {
     setMode("closed");

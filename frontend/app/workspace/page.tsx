@@ -41,6 +41,9 @@ export default function WorkspacePage() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
+  const [methodologyVersion, setMethodologyVersion] =
+  useState(0);
+
   useEffect(() => {
     async function loadWorkspace(): Promise<void> {
       const token = getAccessToken();
@@ -117,6 +120,12 @@ export default function WorkspacePage() {
       setSelectedDimension(null);
       setSelectedIndicator(null);
     }
+  }
+
+  function refreshMethodology(): void {
+    setMethodologyVersion(
+      (current) => current + 1,
+    );
   }
 
   if (isLoading) {
@@ -208,8 +217,10 @@ export default function WorkspacePage() {
         selectedIndex={selectedIndex}
         selectedDimension={selectedDimension}
         selectedIndicator={selectedIndicator}
+        methodologyVersion={methodologyVersion}
         onSelectDimension={handleSelectDimension}
         onSelectIndicator={setSelectedIndicator}
+        onMethodologyChange={refreshMethodology}
       />
     </main>
   );

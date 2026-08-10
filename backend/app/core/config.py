@@ -20,6 +20,12 @@ class Settings(BaseSettings):
 
     allowed_origins: str = "http://localhost:3000"
 
+    cloudflare_account_id: str | None = None
+    cloudflare_ai_token: str | None = None
+    cloudflare_ai_model: str = (
+        "@cf/meta/llama-3.1-8b-instruct-fast"
+    )
+
     class Config:
         env_file = ".env"
 

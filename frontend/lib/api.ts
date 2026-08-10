@@ -66,6 +66,31 @@ export type UpdateDimensionRequest = {
   order_position?: number;
 };
 
+export type DimensionSuggestion = {
+  name: string;
+  description: string;
+  reasoning: string;
+};
+
+export type DimensionSuggestionResponse = {
+  suggestions: DimensionSuggestion[];
+};
+
+export type IndicatorSuggestion = {
+  name: string;
+  description: string;
+  unit: string | null;
+  directionality:
+    | "higher_is_better"
+    | "lower_is_better"
+    | null;
+  reasoning: string;
+};
+
+export type IndicatorSuggestionResponse = {
+  suggestions: IndicatorSuggestion[];
+};
+
 async function request<T>(
   path: string,
   options: RequestInit = {},
@@ -305,5 +330,35 @@ export async function deleteIndicator(
       method: "DELETE",
     },
   );
+
+  
 }
 
+export function suggestDimensions(
+  indexSlug: string,
+): Promise<DimensionSuggestionResponse> {
+  return request<DimensionSuggestionResponse>(
+    `/copilot/indexes/${encodeURIComponent(
+      indexSlug,
+    )}/suggest-dimensions`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export function suggestIndicators(
+  indexSlug: string,
+  dimensionId: string,
+): Promise<IndicatorSuggestionResponse> {
+  return request<IndicatorSuggestionResponse>(
+    `/copilot/indexes/${encodeURIComponent(
+      indexSlug,
+    )}/dimensions/${encodeURIComponent(
+      dimensionId,
+    )}/suggest-indicators`,
+    {
+      method: "POST",
+    },
+  );
+}
