@@ -11,7 +11,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
-
+from sqlalchemy.dialects.postgresql import JSONB
 from app.core.db import Base
 
 class User(Base):
@@ -213,4 +213,40 @@ class DataPoint(Base):
             "period",
             name="uq_data_point_source_entity_period",
         ),
+    )
+
+class WeightingConfig(Base):
+    __tablename__ = "weighting_configs"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+
+    index_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey(
+            "indexes.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+    )
+
+    method = Column(
+        Text,
+        nullable=False,
+        default="equal",
+    )
+
+    config = Column(
+        JSONB,
+        nullable=False,
+        default=dict,
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )

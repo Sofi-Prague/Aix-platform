@@ -20,8 +20,6 @@ import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { StatusMessage } from "./ui/StatusMessage";
 
-import { DataSourceManager } from "./DataSourceManager";
-
 type IndicatorManagerProps = {
   selectedIndex: IndexRecord;
   selectedDimension: DimensionRecord;
@@ -53,11 +51,18 @@ export function IndicatorManager({
   onSelectIndicator,
   onMethodologyChange,
 }: IndicatorManagerProps) {
-  const [indicators, setIndicators] =
-    useState<IndicatorRecord[]>([]);
+  const [
+    indicators,
+    setIndicators,
+  ] = useState<IndicatorRecord[]>([]);
 
   const [mode, setMode] =
     useState<FormMode>("closed");
+
+  const [
+    isIndicatorListOpen,
+    setIsIndicatorListOpen,
+  ] = useState(false);
 
   const [
     editingIndicator,
@@ -66,10 +71,16 @@ export function IndicatorManager({
     null,
   );
 
-  const [name, setName] = useState("");
-  const [description, setDescription] =
+  const [name, setName] =
     useState("");
-  const [unit, setUnit] = useState("");
+
+  const [
+    description,
+    setDescription,
+  ] = useState("");
+
+  const [unit, setUnit] =
+    useState("");
 
   const [
     directionality,
@@ -88,26 +99,34 @@ export function IndicatorManager({
     setOrderPosition,
   ] = useState(0);
 
-  const [isLoading, setIsLoading] =
-    useState(false);
+  const [
+    isLoading,
+    setIsLoading,
+  ] = useState(false);
 
-  const [isSaving, setIsSaving] =
-    useState(false);
+  const [
+    isSaving,
+    setIsSaving,
+  ] = useState(false);
 
-  const [deletingId, setDeletingId] =
-    useState<string | null>(null);
+  const [
+    deletingId,
+    setDeletingId,
+  ] = useState<string | null>(
+    null,
+  );
 
-  const [error, setError] = useState("");
+  const [error, setError] =
+    useState("");
+
   const [message, setMessage] =
     useState("");
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadIndicators(): Promise<void> {
       setIsLoading(true);
-      setError("");
-      setMessage("");
-      setMode("closed");
-      setEditingIndicator(null);
 
       try {
         const result =
@@ -116,19 +135,33 @@ export function IndicatorManager({
             selectedDimension.id,
           );
 
-        setIndicators(result);
+        if (!cancelled) {
+          setIndicators(result);
+          setError("");
+          setMessage("");
+          setMode("closed");
+          setEditingIndicator(null);
+        }
       } catch (caughtError) {
-        setError(
-          caughtError instanceof Error
-            ? caughtError.message
-            : "Unable to load indicators.",
-        );
+        if (!cancelled) {
+          setError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Unable to load indicators.",
+          );
+        }
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     }
 
     void loadIndicators();
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     selectedIndex.slug,
     selectedDimension.id,
@@ -168,12 +201,16 @@ export function IndicatorManager({
     setError("");
     setMessage("");
     setMode("create");
+
+    setIsIndicatorListOpen(true);
   }
 
   function beginEdit(
     indicator: IndicatorRecord,
   ): void {
-    setEditingIndicator(indicator);
+    setEditingIndicator(
+      indicator,
+    );
 
     setName(
       indicator.name,
@@ -206,6 +243,27 @@ export function IndicatorManager({
     onSelectIndicator(
       indicator,
     );
+
+    setIsIndicatorListOpen(
+      false,
+    );
+  }
+
+  function handleSelectIndicator(
+    indicator: IndicatorRecord,
+  ): void {
+    onSelectIndicator(
+      indicator,
+    );
+
+    setIsIndicatorListOpen(
+      false,
+    );
+
+    setMode("closed");
+    setEditingIndicator(null);
+    setError("");
+    setMessage("");
   }
 
   async function handleSubmit(
@@ -240,16 +298,24 @@ export function IndicatorManager({
             },
           );
 
-        setIndicators((current) =>
-          [...current, created].sort(
-            (first, second) =>
-              first.order_position -
-              second.order_position,
-          ),
+        setIndicators(
+          (current) =>
+            [
+              ...current,
+              created,
+            ].sort(
+              (first, second) =>
+                first.order_position -
+                second.order_position,
+            ),
         );
 
         onSelectIndicator(
           created,
+        );
+
+        setIsIndicatorListOpen(
+          false,
         );
 
         onMethodologyChange();
@@ -285,23 +351,29 @@ export function IndicatorManager({
             },
           );
 
-        setIndicators((current) =>
-          current
-            .map((indicator) =>
-              indicator.id ===
-              updated.id
-                ? updated
-                : indicator,
-            )
-            .sort(
-              (first, second) =>
-                first.order_position -
-                second.order_position,
-            ),
+        setIndicators(
+          (current) =>
+            current
+              .map(
+                (indicator) =>
+                  indicator.id ===
+                  updated.id
+                    ? updated
+                    : indicator,
+              )
+              .sort(
+                (first, second) =>
+                  first.order_position -
+                  second.order_position,
+              ),
         );
 
         onSelectIndicator(
           updated,
+        );
+
+        setIsIndicatorListOpen(
+          false,
         );
 
         onMethodologyChange();
@@ -311,7 +383,14 @@ export function IndicatorManager({
         );
       }
 
-      resetForm();
+      setMode("closed");
+      setEditingIndicator(null);
+      setName("");
+      setDescription("");
+      setUnit("");
+      setDirectionality("");
+      setIndicatorStatus("draft");
+      setOrderPosition(0);
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -326,9 +405,10 @@ export function IndicatorManager({
   async function handleDelete(
     indicator: IndicatorRecord,
   ): Promise<void> {
-    const confirmed = window.confirm(
-      `Delete "${indicator.name}"? This action cannot be undone.`,
-    );
+    const confirmed =
+      window.confirm(
+        `Delete "${indicator.name}"? This action cannot be undone.`,
+      );
 
     if (!confirmed) {
       return;
@@ -348,12 +428,13 @@ export function IndicatorManager({
         indicator.id,
       );
 
-      setIndicators((current) =>
-        current.filter(
-          (item) =>
-            item.id !==
-            indicator.id,
-        ),
+      setIndicators(
+        (current) =>
+          current.filter(
+            (item) =>
+              item.id !==
+              indicator.id,
+          ),
       );
 
       if (
@@ -362,6 +443,10 @@ export function IndicatorManager({
       ) {
         onSelectIndicator(
           null,
+        );
+
+        setIsIndicatorListOpen(
+          true,
         );
       }
 
@@ -384,9 +469,7 @@ export function IndicatorManager({
           : "Unable to delete the indicator.",
       );
     } finally {
-      setDeletingId(
-        null,
-      );
+      setDeletingId(null);
     }
   }
 
@@ -408,6 +491,7 @@ export function IndicatorManager({
           justifyContent:
             "space-between",
           alignItems: "center",
+          flexWrap: "wrap",
           gap:
             "var(--aix-space-sm)",
           marginBottom:
@@ -433,9 +517,7 @@ export function IndicatorManager({
               fontSize: "13px",
             }}
           >
-            {
-              selectedDimension.name
-            }
+            {selectedDimension.name}
           </p>
         </div>
 
@@ -526,9 +608,7 @@ export function IndicatorManager({
             <textarea
               id="indicator-description"
               rows={4}
-              value={
-                description
-              }
+              value={description}
               onChange={(event) =>
                 setDescription(
                   event.target.value,
@@ -543,8 +623,7 @@ export function IndicatorManager({
                 borderRadius:
                   "var(--aix-radius-sm)",
                 font: "inherit",
-                resize:
-                  "vertical",
+                resize: "vertical",
               }}
             />
           </div>
@@ -574,9 +653,7 @@ export function IndicatorManager({
 
             <select
               id="indicator-directionality"
-              value={
-                directionality
-              }
+              value={directionality}
               onChange={(event) =>
                 setDirectionality(
                   event.target
@@ -584,8 +661,7 @@ export function IndicatorManager({
                 )
               }
               style={{
-                minHeight:
-                  "42px",
+                minHeight: "42px",
                 padding:
                   "10px 12px",
                 border:
@@ -638,8 +714,7 @@ export function IndicatorManager({
                 )
               }
               style={{
-                minHeight:
-                  "42px",
+                minHeight: "42px",
                 padding:
                   "10px 12px",
                 border:
@@ -669,9 +744,7 @@ export function IndicatorManager({
             label="Order position"
             type="number"
             min={0}
-            value={
-              orderPosition
-            }
+            value={orderPosition}
             onChange={(event) =>
               setOrderPosition(
                 Number(
@@ -684,17 +757,14 @@ export function IndicatorManager({
           <div
             style={{
               display: "flex",
-              flexWrap:
-                "wrap",
+              flexWrap: "wrap",
               gap:
                 "var(--aix-space-sm)",
             }}
           >
             <Button
               type="submit"
-              isLoading={
-                isSaving
-              }
+              isLoading={isSaving}
             >
               {mode === "create"
                 ? "Create indicator"
@@ -704,9 +774,7 @@ export function IndicatorManager({
             <Button
               type="button"
               variant="secondary"
-              onClick={
-                resetForm
-              }
+              onClick={resetForm}
             >
               Cancel
             </Button>
@@ -719,8 +787,31 @@ export function IndicatorManager({
           type="loading"
           title="Loading indicators…"
         />
-      ) : indicators.length ===
-        0 ? (
+      ) : selectedIndicator &&
+        !isIndicatorListOpen ? (
+        <SelectedIndicatorCard
+          indicator={
+            selectedIndicator
+          }
+          onChange={() => {
+            setIsIndicatorListOpen(
+              true,
+            );
+
+            setMode("closed");
+            setEditingIndicator(
+              null,
+            );
+            setError("");
+            setMessage("");
+          }}
+          onEdit={() =>
+            beginEdit(
+              selectedIndicator,
+            )
+          }
+        />
+      ) : indicators.length === 0 ? (
         <StatusMessage
           type="empty"
           title="No indicators yet"
@@ -764,7 +855,7 @@ export function IndicatorManager({
                   <button
                     type="button"
                     onClick={() =>
-                      onSelectIndicator(
+                      handleSelectIndicator(
                         indicator,
                       )
                     }
@@ -810,18 +901,16 @@ export function IndicatorManager({
                     {indicator.directionality && (
                       <p
                         style={{
-                          margin:
-                            0,
+                          margin: 0,
                           color:
                             "var(--aix-color-text-muted)",
                           fontSize:
                             "13px",
                         }}
                       >
-                        {indicator.directionality ===
-                        "higher_is_better"
-                          ? "Higher is better"
-                          : "Lower is better"}
+                        {formatDirectionality(
+                          indicator.directionality,
+                        )}
                       </p>
                     )}
                   </button>
@@ -875,18 +964,122 @@ export function IndicatorManager({
           )}
         </ul>
       )}
-      {selectedIndicator && (
-        <DataSourceManager
-          key={selectedIndicator.id}
-          selectedIndex={selectedIndex}
-          selectedDimension={
-            selectedDimension
-          }
-          selectedIndicator={
-            selectedIndicator
-          }
-        />
-      )}
     </section>
   );
+}
+
+function SelectedIndicatorCard({
+  indicator,
+  onChange,
+  onEdit,
+}: {
+  indicator: IndicatorRecord;
+  onChange: () => void;
+  onEdit: () => void;
+}) {
+  return (
+    <div
+      style={{
+        padding:
+          "var(--aix-space-sm)",
+        border:
+          "2px solid var(--aix-color-primary)",
+        borderRadius:
+          "var(--aix-radius-sm)",
+        background:
+          "var(--aix-color-surface)",
+        marginBottom:
+          "var(--aix-space-md)",
+      }}
+    >
+      <strong>
+        {indicator.name}
+      </strong>
+
+      <p
+        style={{
+          margin: "4px 0",
+          color:
+            "var(--aix-color-text-muted)",
+          fontSize: "13px",
+        }}
+      >
+        {indicator.status}
+
+        {indicator.unit
+          ? ` · ${indicator.unit}`
+          : ""}
+      </p>
+
+      {indicator.description && (
+        <p
+          style={{
+            margin: "4px 0",
+            color:
+              "var(--aix-color-text-muted)",
+            fontSize: "13px",
+          }}
+        >
+          {indicator.description}
+        </p>
+      )}
+
+      {indicator.directionality && (
+        <p
+          style={{
+            margin: "4px 0 0",
+            color:
+              "var(--aix-color-text-muted)",
+            fontSize: "13px",
+          }}
+        >
+          {formatDirectionality(
+            indicator.directionality,
+          )}
+        </p>
+      )}
+
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap:
+            "var(--aix-space-sm)",
+          marginTop:
+            "var(--aix-space-sm)",
+        }}
+      >
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={onChange}
+        >
+          Change indicator
+        </Button>
+
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={onEdit}
+        >
+          Edit
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function formatDirectionality(
+  directionality:
+    | "higher_is_better"
+    | "lower_is_better",
+): string {
+  if (
+    directionality ===
+    "higher_is_better"
+  ) {
+    return "Higher is better";
+  }
+
+  return "Lower is better";
 }

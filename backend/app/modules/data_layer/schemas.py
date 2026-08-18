@@ -39,3 +39,23 @@ class DataSourceDetailOut(DataSourceOut):
 class CSVUploadResponse(BaseModel):
     data_source: DataSourceOut
     rows_imported: int
+
+class NormalizedDataPointOut(BaseModel):
+    entity: str
+    period: str
+    raw_value: float
+    normalized_value: float
+
+
+class NormalizationPeriodSummary(BaseModel):
+    period: str
+    minimum: float
+    maximum: float
+
+
+class NormalizationResponse(BaseModel):
+    indicator_id: uuid.UUID
+    indicator_name: str
+    directionality: str
+    periods: list[NormalizationPeriodSummary]
+    data_points: list[NormalizedDataPointOut]

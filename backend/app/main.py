@@ -10,6 +10,12 @@ from app.modules.ai_orchestration.router import router as ai_router
 from app.modules.publishing.router import router as publishing_router
 from app.modules.notifications.router import router as notifications_router
 from app.modules.analytics_audit.router import router as audit_router
+from app.modules.methodology_engine.weighting_router import (
+    router as weighting_router,
+)
+from app.modules.methodology_engine.calculation_router import (
+    router as calculation_router,
+)
 
 app = FastAPI(title=settings.app_name)
 
@@ -36,6 +42,8 @@ app.include_router(ai_router)
 app.include_router(publishing_router)
 app.include_router(notifications_router)
 app.include_router(audit_router)
+app.include_router(weighting_router)
+app.include_router(calculation_router)
 
 
 @app.get("/health")

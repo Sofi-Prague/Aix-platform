@@ -10,11 +10,13 @@ import {
   deleteDataSource,
   getDataSource,
   getDataSources,
+  getNormalizedData,
   type DataSourceDetailRecord,
   type DataSourceRecord,
   type DimensionRecord,
   type IndexRecord,
   type IndicatorRecord,
+  type NormalizationResponse,
   uploadDataSourceCsv,
 } from "../lib/api";
 
@@ -75,6 +77,22 @@ export function DataSourceManager({
   const [message, setMessage] =
     useState("");
 
+  const [
+    normalizedData,
+    setNormalizedData,
+  ] = useState<NormalizationResponse | null>(
+    null,
+  );
+
+  const [
+    isLoadingNormalization,
+    setIsLoadingNormalization,
+  ] = useState(false);
+
+  const [
+    dataView,
+    setDataView,
+  ] = useState<"raw" | "normalized">("raw");
 
 useEffect(() => {
   let cancelled = false;
@@ -167,6 +185,9 @@ useEffect(() => {
         ...current,
       ]);
 
+      setNormalizedData(null);
+      setDataView("raw");
+
       setSourceName("");
       setSourceUrl("");
       setFile(null);
@@ -230,6 +251,43 @@ useEffect(() => {
     }
   }
 
+  async function handleLoadNormalization(): Promise<void> {
+    if (
+      dataView === "normalized" &&
+      normalizedData
+    ) {
+      setDataView("raw");
+      return;
+    }
+
+    if (normalizedData) {
+      setDataView("normalized");
+      return;
+    }
+
+    setIsLoadingNormalization(true);
+    setError("");
+
+    try {
+      const result =
+        await getNormalizedData(
+          selectedIndex.slug,
+          selectedDimension.id,
+          selectedIndicator.id,
+        );
+
+      setNormalizedData(result);
+      setDataView("normalized");
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Unable to normalize the indicator data.",
+      );
+    } finally {
+      setIsLoadingNormalization(false);
+    }
+  }
 
   async function handleDelete(
     source: DataSourceRecord,
@@ -259,6 +317,9 @@ useEffect(() => {
           (item) => item.id !== source.id,
         ),
       );
+
+      setNormalizedData(null);
+      setDataView("raw");
 
       if (
         selectedSource?.id === source.id
@@ -521,71 +582,186 @@ useEffect(() => {
 
           <div
             style={{
-              overflowX: "auto",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "var(--aix-space-sm)",
+              marginBottom: "var(--aix-space-md)",
             }}
           >
-            <table
+            <Button
+              type="button"
+              variant={
+                dataView === "raw"
+                  ? "primary"
+                  : "secondary"
+              }
+              onClick={() => setDataView("raw")}
+            >
+              Raw data
+            </Button>
+
+            <Button
+              type="button"
+              variant={
+                dataView === "normalized"
+                  ? "primary"
+                  : "secondary"
+              }
+              disabled={isLoadingNormalization}
+              onClick={() =>
+                void handleLoadNormalization()
+              }
+            >
+              {isLoadingNormalization
+                ? "Normalizing…"
+                : "Normalized data"}
+            </Button>
+          </div>
+
+          {dataView === "raw" ? (
+            <div
               style={{
-                width: "100%",
-                borderCollapse:
-                  "collapse",
+                overflowX: "auto",
               }}
             >
-              <thead>
-                <tr>
-                  <th
-                    style={tableHeaderStyle}
-                  >
-                    Entity
-                  </th>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                }}
+              >
+                <thead>
+                  <tr>
+                    <th style={tableHeaderStyle}>
+                      Entity
+                    </th>
 
-                  <th
-                    style={tableHeaderStyle}
-                  >
-                    Period
-                  </th>
+                    <th style={tableHeaderStyle}>
+                      Period
+                    </th>
 
-                  <th
-                    style={tableHeaderStyle}
-                  >
-                    Value
-                  </th>
-                </tr>
-              </thead>
+                    <th style={tableHeaderStyle}>
+                      Value
+                    </th>
+                  </tr>
+                </thead>
 
-              <tbody>
-                {selectedSource.data_points.map(
-                  (point) => (
-                    <tr key={point.id}>
-                      <td
-                        style={
-                          tableCellStyle
-                        }
-                      >
-                        {point.entity}
-                      </td>
+                <tbody>
+                  {selectedSource.data_points.map(
+                    (point) => (
+                      <tr key={point.id}>
+                        <td style={tableCellStyle}>
+                          {point.entity}
+                        </td>
 
-                      <td
-                        style={
-                          tableCellStyle
-                        }
-                      >
-                        {point.period}
-                      </td>
+                        <td style={tableCellStyle}>
+                          {point.period}
+                        </td>
 
-                      <td
-                        style={
-                          tableCellStyle
-                        }
-                      >
-                        {point.value}
-                      </td>
-                    </tr>
+                        <td style={tableCellStyle}>
+                          {point.value}
+                        </td>
+                      </tr>
+                    ),
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : normalizedData ? (
+            <>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: "var(--aix-space-sm)",
+                  marginBottom: "var(--aix-space-md)",
+                }}
+              >
+                {normalizedData.periods.map(
+                  (period) => (
+                    <div
+                      key={period.period}
+                      style={{
+                        padding: "8px 12px",
+                        border:
+                          "1px solid var(--aix-color-border)",
+                        borderRadius:
+                          "var(--aix-radius-sm)",
+                        fontSize: "13px",
+                      }}
+                    >
+                      <strong>{period.period}</strong>
+                      {" · "}
+                      Min {period.minimum}
+                      {" · "}
+                      Max {period.maximum}
+                    </div>
                   ),
                 )}
-              </tbody>
-            </table>
-          </div>
+              </div>
+
+              <div
+                style={{
+                  overflowX: "auto",
+                }}
+              >
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                  }}
+                >
+                  <thead>
+                    <tr>
+                      <th style={tableHeaderStyle}>
+                        Entity
+                      </th>
+
+                      <th style={tableHeaderStyle}>
+                        Period
+                      </th>
+
+                      <th style={tableHeaderStyle}>
+                        Raw value
+                      </th>
+
+                      <th style={tableHeaderStyle}>
+                        Normalized
+                      </th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {normalizedData.data_points.map(
+                      (point, index) => (
+                        <tr
+                          key={`${point.entity}-${point.period}-${index}`}
+                        >
+                          <td style={tableCellStyle}>
+                            {point.entity}
+                          </td>
+
+                          <td style={tableCellStyle}>
+                            {point.period}
+                          </td>
+
+                          <td style={tableCellStyle}>
+                            {point.raw_value}
+                          </td>
+
+                          <td style={tableCellStyle}>
+                            {point.normalized_value.toFixed(
+                              3,
+                            )}
+                          </td>
+                        </tr>
+                      ),
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : null}
         </div>
       )}
 

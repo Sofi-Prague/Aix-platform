@@ -33,6 +33,9 @@ from app.modules.data_layer.schemas import (
     DataPointOut,
     DataSourceDetailOut,
     DataSourceOut,
+    NormalizationPeriodSummary,
+    NormalizationResponse,
+    NormalizedDataPointOut,
 )
 from app.modules.identity.router import get_current_user
 
@@ -427,7 +430,6 @@ async def upload_csv(
         rows_imported=len(rows),
     )
 
-
 @router.get(
     (
         "/indexes/{index_slug}"
@@ -561,3 +563,157 @@ def delete_data_source(
     db.commit()
 
     return None
+
+@router.get(
+    (
+        "/indexes/{index_slug}"
+        "/dimensions/{dimension_id}"
+        "/indicators/{indicator_id}"
+        "/normalize"
+    ),
+    response_model=NormalizationResponse,
+)
+
+@router.get(
+    (
+        "/indexes/{index_slug}"
+        "/dimensions/{dimension_id}"
+        "/indicators/{indicator_id}"
+        "/normalize"
+    ),
+    response_model=NormalizationResponse,
+)
+def normalize_indicator_data(
+    index_slug: str,
+    dimension_id: uuid.UUID,
+    indicator_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    indicator = get_indicator_for_user(
+        index_slug,
+        dimension_id,
+        indicator_id,
+        db,
+        current_user,
+    )
+
+    if indicator.directionality not in (
+        "higher_is_better",
+        "lower_is_better",
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Indicator directionality must be "
+                "'higher_is_better' or "
+                "'lower_is_better' before normalization."
+            ),
+        )
+
+    points = (
+        db.query(DataPoint)
+        .filter(
+            DataPoint.indicator_id
+            == indicator.id,
+        )
+        .order_by(
+            DataPoint.period.asc(),
+            DataPoint.entity.asc(),
+        )
+        .all()
+    )
+
+    if not points:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Indicator has no data points "
+                "to normalize."
+            ),
+        )
+
+    points_by_period: dict[
+        str,
+        list[DataPoint],
+    ] = {}
+
+    for point in points:
+        points_by_period.setdefault(
+            point.period,
+            [],
+        ).append(point)
+
+    normalized_points: list[
+        NormalizedDataPointOut
+    ] = []
+
+    period_summaries: list[
+        NormalizationPeriodSummary
+    ] = []
+
+    for period in sorted(
+        points_by_period
+    ):
+        period_points = (
+            points_by_period[period]
+        )
+
+        values = [
+            point.value
+            for point in period_points
+        ]
+
+        minimum = min(values)
+        maximum = max(values)
+
+        period_summaries.append(
+            NormalizationPeriodSummary(
+                period=period,
+                minimum=minimum,
+                maximum=maximum,
+            )
+        )
+
+        for point in period_points:
+            if maximum == minimum:
+                normalized_value = 1.0
+
+            elif (
+                indicator.directionality
+                == "higher_is_better"
+            ):
+                normalized_value = (
+                    point.value - minimum
+                ) / (
+                    maximum - minimum
+                )
+
+            else:
+                normalized_value = (
+                    maximum - point.value
+                ) / (
+                    maximum - minimum
+                )
+
+            normalized_points.append(
+                NormalizedDataPointOut(
+                    entity=point.entity,
+                    period=point.period,
+                    raw_value=point.value,
+                    normalized_value=round(
+                        normalized_value,
+                        6,
+                    ),
+                )
+            )
+
+    return NormalizationResponse(
+        indicator_id=indicator.id,
+        indicator_name=indicator.name,
+        directionality=(
+            indicator.directionality
+        ),
+        periods=period_summaries,
+        data_points=normalized_points,
+    )

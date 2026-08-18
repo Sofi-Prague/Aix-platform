@@ -515,6 +515,22 @@ export async function deleteDataSource(
   );
 }
 
+export function getNormalizedData(
+  indexSlug: string,
+  dimensionId: string,
+  indicatorId: string,
+): Promise<NormalizationResponse> {
+  return request<NormalizationResponse>(
+    `/data/indexes/${encodeURIComponent(
+      indexSlug,
+    )}/dimensions/${encodeURIComponent(
+      dimensionId,
+    )}/indicators/${encodeURIComponent(
+      indicatorId,
+    )}/normalize`,
+  );
+}
+
 export function suggestDimensions(
   indexSlug: string,
 ): Promise<DimensionSuggestionResponse> {
@@ -632,3 +648,132 @@ export type CSVUploadResponse = {
   data_source: DataSourceRecord;
   rows_imported: number;
 };
+
+export type NormalizedDataPointRecord = {
+  entity: string;
+  period: string;
+  raw_value: number;
+  normalized_value: number;
+};
+
+export type NormalizationPeriodSummary = {
+  period: string;
+  minimum: number;
+  maximum: number;
+};
+
+export type NormalizationResponse = {
+  indicator_id: string;
+  indicator_name: string;
+  directionality:
+    | "higher_is_better"
+    | "lower_is_better";
+  periods: NormalizationPeriodSummary[];
+  data_points: NormalizedDataPointRecord[];
+};
+
+export type WeightingMethod =
+  | "equal"
+  | "custom";
+
+export type WeightItem = {
+  id: string;
+  weight: number;
+};
+
+export type WeightingConfigRecord = {
+  id: string;
+  index_id: string;
+  method: WeightingMethod;
+  config: {
+    dimension_weights?: Record<
+      string,
+      number
+    >;
+    indicator_weights?: Record<
+      string,
+      number
+    >;
+  };
+  created_at: string;
+};
+
+export type SaveWeightingRequest = {
+  method: WeightingMethod;
+  dimension_weights: WeightItem[];
+  indicator_weights: WeightItem[];
+};
+
+export function getWeighting(
+  indexSlug: string,
+): Promise<WeightingConfigRecord | null> {
+  return request<
+    WeightingConfigRecord | null
+  >(
+    `/methodology/indexes/${encodeURIComponent(
+      indexSlug,
+    )}/weighting`,
+  );
+}
+
+export function saveWeighting(
+  indexSlug: string,
+  payload: SaveWeightingRequest,
+): Promise<WeightingConfigRecord> {
+  return request<WeightingConfigRecord>(
+    `/methodology/indexes/${encodeURIComponent(
+      indexSlug,
+    )}/weighting`,
+    {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export type CalculatedIndicatorRecord = {
+  indicator_id: string;
+  indicator_name: string;
+  raw_value: number;
+  normalized_value: number;
+  weight: number;
+  weighted_score: number;
+};
+
+export type CalculatedDimensionRecord = {
+  dimension_id: string;
+  dimension_name: string;
+  weight: number;
+  score: number;
+  weighted_score: number;
+  indicators: CalculatedIndicatorRecord[];
+};
+
+export type CalculatedEntityRecord = {
+  entity: string;
+  rank: number;
+  score: number;
+  dimensions: CalculatedDimensionRecord[];
+};
+
+export type CalculatedPeriodRecord = {
+  period: string;
+  results: CalculatedEntityRecord[];
+};
+
+export type IndexCalculationResponse = {
+  index_slug: string;
+  index_name: string;
+  weighting_method: WeightingMethod;
+  periods: CalculatedPeriodRecord[];
+};
+
+export function calculateIndex(
+  indexSlug: string,
+): Promise<IndexCalculationResponse> {
+  return request<IndexCalculationResponse>(
+    `/calculation/indexes/${encodeURIComponent(
+      indexSlug,
+    )}`,
+  );
+}

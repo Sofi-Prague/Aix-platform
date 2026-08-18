@@ -49,6 +49,11 @@ export function IndexManager({
   const [mode, setMode] =
     useState<EditorMode>("closed");
 
+  const [
+    isIndexListOpen,
+    setIsIndexListOpen,
+  ] = useState(false);
+
   const [editingIndex, setEditingIndex] =
     useState<IndexRecord | null>(null);
 
@@ -134,6 +139,7 @@ export function IndexManager({
         ]);
 
         onSelectIndex(created);
+        setIsIndexListOpen(false);
 
         onMethodologyChange();
 
@@ -221,6 +227,7 @@ export function IndexManager({
         selectedIndex?.id === index.id
       ) {
         onSelectIndex(null);
+        setIsIndexListOpen(true);
       }
 
       if (
@@ -279,7 +286,10 @@ export function IndexManager({
 
         <Button
           type="button"
-          onClick={beginCreate}
+          onClick={() => {
+            setIsIndexListOpen(true);
+            beginCreate();
+          }}
         >
           New index
         </Button>
@@ -475,7 +485,69 @@ export function IndexManager({
         </form>
       )}
 
-      {indexes.length === 0 ? (
+      {selectedIndex && !isIndexListOpen ? (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "var(--aix-space-md)",
+            padding: "var(--aix-space-md)",
+            border:
+              "1px solid var(--aix-color-border)",
+            borderRadius:
+              "var(--aix-radius-sm)",
+            background:
+              "var(--aix-color-surface)",
+          }}
+        >
+          <div>
+            <strong>
+              {selectedIndex.name}
+            </strong>
+
+            <p
+              style={{
+                margin: "4px 0 0",
+                color:
+                  "var(--aix-color-text-muted)",
+              }}
+            >
+              {selectedIndex.slug} ·{" "}
+              {selectedIndex.status}
+            </p>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "var(--aix-space-sm)",
+              flexWrap: "wrap",
+            }}
+          >
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() =>
+                setIsIndexListOpen(true)
+              }
+            >
+              Change index
+            </Button>
+
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() =>
+                beginEdit(selectedIndex)
+              }
+            >
+              Edit
+            </Button>
+          </div>
+        </div>
+      ) : indexes.length === 0 ? (
         <StatusMessage
           type="empty"
           title="No indexes yet"
@@ -485,8 +557,7 @@ export function IndexManager({
         <ul
           style={{
             display: "grid",
-            gap:
-              "var(--aix-space-sm)",
+            gap: "var(--aix-space-sm)",
             padding: 0,
             margin: 0,
             listStyle: "none",
@@ -494,8 +565,7 @@ export function IndexManager({
         >
           {indexes.map((index) => {
             const isSelected =
-              selectedIndex?.id ===
-              index.id;
+              selectedIndex?.id === index.id;
 
             return (
               <li
@@ -504,8 +574,7 @@ export function IndexManager({
                   display: "flex",
                   justifyContent:
                     "space-between",
-                  alignItems:
-                    "center",
+                  alignItems: "center",
                   flexWrap: "wrap",
                   gap:
                     "var(--aix-space-md)",
@@ -527,8 +596,7 @@ export function IndexManager({
 
                   <p
                     style={{
-                      margin:
-                        "4px 0 0",
+                      margin: "4px 0 0",
                       color:
                         "var(--aix-color-text-muted)",
                     }}
@@ -544,13 +612,10 @@ export function IndexManager({
                           "var(--aix-space-sm) 0 0",
                         color:
                           "var(--aix-color-text-muted)",
-                        maxWidth:
-                          "600px",
+                        maxWidth: "600px",
                       }}
                     >
-                      {
-                        index.description
-                      }
+                      {index.description}
                     </p>
                   )}
                 </div>
@@ -558,8 +623,7 @@ export function IndexManager({
                 <div
                   style={{
                     display: "flex",
-                    flexWrap:
-                      "wrap",
+                    flexWrap: "wrap",
                     gap:
                       "var(--aix-space-sm)",
                   }}
@@ -571,14 +635,15 @@ export function IndexManager({
                         ? "primary"
                         : "secondary"
                     }
-                    onClick={() =>
-                      onSelectIndex(
-                        index,
-                      )
-                    }
+                    onClick={() => {
+                      onSelectIndex(index);
+                      setIsIndexListOpen(
+                        false,
+                      );
+                    }}
                   >
                     {isSelected
-                      ? "Selected"
+                      ? "Use selected"
                       : "Open"}
                   </Button>
 
@@ -586,9 +651,7 @@ export function IndexManager({
                     type="button"
                     variant="secondary"
                     onClick={() =>
-                      beginEdit(
-                        index,
-                      )
+                      beginEdit(index)
                     }
                   >
                     Edit
@@ -602,9 +665,7 @@ export function IndexManager({
                       index.slug
                     }
                     onClick={() =>
-                      void handleDelete(
-                        index,
-                      )
+                      void handleDelete(index)
                     }
                   >
                     {deletingSlug ===
