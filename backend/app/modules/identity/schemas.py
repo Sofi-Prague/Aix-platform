@@ -1,13 +1,12 @@
 import uuid
 from datetime import datetime
-from pydantic import BaseModel, EmailStr
+
+from pydantic import BaseModel, EmailStr, Field
 
 
 class UserCreate(BaseModel):
-    tenant_id: uuid.UUID
     email: EmailStr
-    password: str
-    role: str = "author"
+    password: str = Field(min_length=8, max_length=128)
 
 
 class UserOut(BaseModel):

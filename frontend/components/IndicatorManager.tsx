@@ -20,6 +20,8 @@ import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { StatusMessage } from "./ui/StatusMessage";
 
+import { DataSourceManager } from "./DataSourceManager";
+
 type IndicatorManagerProps = {
   selectedIndex: IndexRecord;
   selectedDimension: DimensionRecord;
@@ -872,6 +874,18 @@ export function IndicatorManager({
             },
           )}
         </ul>
+      )}
+      {selectedIndicator && (
+        <DataSourceManager
+          key={selectedIndicator.id}
+          selectedIndex={selectedIndex}
+          selectedDimension={
+            selectedDimension
+          }
+          selectedIndicator={
+            selectedIndicator
+          }
+        />
       )}
     </section>
   );

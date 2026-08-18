@@ -7,6 +7,11 @@ export type LoginRequest = {
   password: string;
 };
 
+export type RegisterRequest = {
+  email: string;
+  password: string;
+};
+
 export type TokenResponse = {
   access_token: string;
   token_type?: string;
@@ -148,8 +153,16 @@ async function request<T>(
 
   const headers = new Headers(options.headers);
 
-  if (!headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
+  const isFormData = options.body instanceof FormData;
+
+  if (
+    !isFormData &&
+    !headers.has("Content-Type")
+  ) {
+    headers.set(
+      "Content-Type",
+      "application/json",
+    );
   }
 
   if (token) {
@@ -190,6 +203,15 @@ export function login(
   credentials: LoginRequest,
 ): Promise<TokenResponse> {
   return request<TokenResponse>("/identity/login", {
+    method: "POST",
+    body: JSON.stringify(credentials),
+  });
+}
+
+export function register(
+  credentials: RegisterRequest,
+): Promise<User> {
+  return request<User>("/identity/register", {
     method: "POST",
     body: JSON.stringify(credentials),
   });
@@ -378,9 +400,119 @@ export async function deleteIndicator(
     {
       method: "DELETE",
     },
+  ); 
+}
+
+function dataSourcesPath(
+  indexSlug: string,
+  dimensionId: string,
+  indicatorId: string,
+): string {
+  return (
+    `/data/indexes/${encodeURIComponent(
+      indexSlug,
+    )}` +
+    `/dimensions/${encodeURIComponent(
+      dimensionId,
+    )}` +
+    `/indicators/${encodeURIComponent(
+      indicatorId,
+    )}` +
+    "/sources"
+  );
+}
+
+
+export function getDataSources(
+  indexSlug: string,
+  dimensionId: string,
+  indicatorId: string,
+): Promise<DataSourceRecord[]> {
+  return request<DataSourceRecord[]>(
+    dataSourcesPath(
+      indexSlug,
+      dimensionId,
+      indicatorId,
+    ),
+  );
+}
+
+
+export function getDataSource(
+  indexSlug: string,
+  dimensionId: string,
+  indicatorId: string,
+  sourceId: string,
+): Promise<DataSourceDetailRecord> {
+  return request<DataSourceDetailRecord>(
+    `${dataSourcesPath(
+      indexSlug,
+      dimensionId,
+      indicatorId,
+    )}/${encodeURIComponent(sourceId)}`,
+  );
+}
+
+
+export function uploadDataSourceCsv(
+  indexSlug: string,
+  dimensionId: string,
+  indicatorId: string,
+  payload: {
+    name: string;
+    sourceUrl?: string;
+    file: File;
+  },
+): Promise<CSVUploadResponse> {
+  const formData = new FormData();
+
+  formData.append(
+    "name",
+    payload.name,
   );
 
-  
+  if (payload.sourceUrl?.trim()) {
+    formData.append(
+      "source_url",
+      payload.sourceUrl.trim(),
+    );
+  }
+
+  formData.append(
+    "file",
+    payload.file,
+  );
+
+  return request<CSVUploadResponse>(
+    `${dataSourcesPath(
+      indexSlug,
+      dimensionId,
+      indicatorId,
+    )}/upload`,
+    {
+      method: "POST",
+      body: formData,
+    },
+  );
+}
+
+
+export async function deleteDataSource(
+  indexSlug: string,
+  dimensionId: string,
+  indicatorId: string,
+  sourceId: string,
+): Promise<void> {
+  await request<void>(
+    `${dataSourcesPath(
+      indexSlug,
+      dimensionId,
+      indicatorId,
+    )}/${encodeURIComponent(sourceId)}`,
+    {
+      method: "DELETE",
+    },
+  );
 }
 
 export function suggestDimensions(
@@ -470,3 +602,33 @@ export async function getPublishedIndex(
 
   return response.json() as Promise<PublicIndexRecord>;
 }
+
+export type DataPointRecord = {
+  id: string;
+  data_source_id: string;
+  indicator_id: string;
+  entity: string;
+  period: string;
+  value: number;
+  created_at: string;
+};
+
+export type DataSourceRecord = {
+  id: string;
+  indicator_id: string;
+  name: string;
+  source_type: string;
+  source_url: string | null;
+  original_filename: string | null;
+  created_at: string;
+};
+
+export type DataSourceDetailRecord =
+  DataSourceRecord & {
+    data_points: DataPointRecord[];
+  };
+
+export type CSVUploadResponse = {
+  data_source: DataSourceRecord;
+  rows_imported: number;
+};

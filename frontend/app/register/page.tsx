@@ -12,33 +12,19 @@ import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
 
-import {
-  getAccessToken,
-  saveAccessToken,
-} from "../../lib/auth";
+import { register } from "../../lib/api";
+import { getAccessToken } from "../../lib/auth";
 
-import { login } from "../../lib/api";
-
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter();
 
-  const params =
-    typeof window !== "undefined"
-      ? new URLSearchParams(
-          window.location.search,
-        )
-      : null;
-
-  const registrationSuccessful =
-    params?.get("registered") === "true";
-
-  const registeredEmail =
-    params?.get("email") ?? "";
-
   const [email, setEmail] =
-    useState(registeredEmail);
+    useState("");
 
   const [password, setPassword] =
+    useState("");
+
+  const [confirmPassword, setConfirmPassword] =
     useState("");
 
   const [error, setError] =
@@ -59,24 +45,37 @@ export default function LoginPage() {
     event.preventDefault();
 
     setError("");
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError(
+        "Password must be at least 8 characters long.",
+      );
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      const response = await login({
+      await register({
         email,
         password,
       });
 
-      saveAccessToken(
-        response.access_token,
+      router.push(
+        `/login?registered=true&email=${encodeURIComponent(
+          email,
+        )}`,
       );
-
-      router.push("/workspace");
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
           ? caughtError.message
-          : "Unable to sign in.",
+          : "Unable to create account.",
       );
     } finally {
       setIsSubmitting(false);
@@ -100,7 +99,7 @@ export default function LoginPage() {
           maxWidth: "420px",
         }}
       >
-        <Card title="Sign in to AIX">
+        <Card title="Create an AIX account">
           <p
             style={{
               color:
@@ -110,35 +109,15 @@ export default function LoginPage() {
                 "var(--aix-space-lg)",
             }}
           >
-            Use your AIX account to access your
-            index workspace.
+            Create an account to start building
+            and managing indexes in AIX.
           </p>
-
-          {registrationSuccessful && (
-            <p
-              role="status"
-              style={{
-                padding:
-                  "var(--aix-space-md)",
-                marginBottom:
-                  "var(--aix-space-lg)",
-                border:
-                  "1px solid var(--aix-color-border)",
-                borderRadius:
-                  "var(--aix-radius-sm)",
-              }}
-            >
-              Account created successfully. You
-              can now sign in.
-            </p>
-          )}
 
           <form
             onSubmit={handleSubmit}
             style={{
               display: "grid",
-              gap:
-                "var(--aix-space-md)",
+              gap: "var(--aix-space-md)",
             }}
           >
             <Input
@@ -150,9 +129,7 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(event) =>
-                setEmail(
-                  event.target.value,
-                )
+                setEmail(event.target.value)
               }
             />
 
@@ -161,11 +138,26 @@ export default function LoginPage() {
               name="password"
               label="Password"
               type="password"
-              autoComplete="current-password"
+              autoComplete="new-password"
               required
+              minLength={8}
               value={password}
               onChange={(event) =>
-                setPassword(
+                setPassword(event.target.value)
+              }
+            />
+
+            <Input
+              id="confirm-password"
+              name="confirm-password"
+              label="Confirm password"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={8}
+              value={confirmPassword}
+              onChange={(event) =>
+                setConfirmPassword(
                   event.target.value,
                 )
               }
@@ -188,17 +180,17 @@ export default function LoginPage() {
               type="submit"
               isLoading={isSubmitting}
             >
-              Sign in
+              Create account
             </Button>
 
             <Button
               type="button"
               variant="secondary"
               onClick={() =>
-                router.push("/register")
+                router.push("/login")
               }
             >
-              Create account
+              Back to sign in
             </Button>
           </form>
         </Card>

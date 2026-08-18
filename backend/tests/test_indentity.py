@@ -7,16 +7,13 @@ from app.core.models import User
 
 
 def test_register_user(client: TestClient):
-    tenant_id = uuid.uuid4()
     email = f"register-{uuid.uuid4()}@example.com"
 
     response = client.post(
         "/identity/register",
         json={
-            "tenant_id": str(tenant_id),
             "email": email,
             "password": "SecureTestPassword123!",
-            "role": "author",
         },
     )
 
@@ -26,8 +23,12 @@ def test_register_user(client: TestClient):
         body = response.json()
 
         assert body["email"] == email
-        assert body["tenant_id"] == str(tenant_id)
         assert body["role"] == "author"
+
+        # The server must generate valid UUIDs for both
+        # the user and their new tenant.
+        uuid.UUID(body["id"])
+        uuid.UUID(body["tenant_id"])
 
         # The API must never expose the password hash.
         assert "password" not in body
@@ -37,7 +38,9 @@ def test_register_user(client: TestClient):
         db = SessionLocal()
 
         try:
-            db.query(User).filter(User.email == email).delete(
+            db.query(User).filter(
+                User.email == email
+            ).delete(
                 synchronize_session=False
             )
             db.commit()
@@ -52,10 +55,8 @@ def test_duplicate_email_is_rejected(
     response = client.post(
         "/identity/register",
         json={
-            "tenant_id": temporary_user["tenant_id"],
             "email": temporary_user["email"],
             "password": "AnotherPassword123!",
-            "role": "author",
         },
     )
 
@@ -63,6 +64,49 @@ def test_duplicate_email_is_rejected(
     assert response.json()["detail"] == (
         "A user with that email already exists"
     )
+
+
+def test_registration_ignores_client_tenant_and_role(
+    client: TestClient,
+):
+    """
+    Public registration must control tenant and role assignment
+    on the server rather than allowing privilege selection.
+    """
+    email = f"controlled-register-{uuid.uuid4()}@example.com"
+
+    supplied_tenant_id = uuid.uuid4()
+
+    response = client.post(
+        "/identity/register",
+        json={
+            "email": email,
+            "password": "SecureTestPassword123!",
+            "tenant_id": str(supplied_tenant_id),
+            "role": "admin",
+        },
+    )
+
+    try:
+        assert response.status_code == 201, response.text
+
+        body = response.json()
+
+        assert body["role"] == "author"
+        assert body["tenant_id"] != str(supplied_tenant_id)
+
+    finally:
+        db = SessionLocal()
+
+        try:
+            db.query(User).filter(
+                User.email == email
+            ).delete(
+                synchronize_session=False
+            )
+            db.commit()
+        finally:
+            db.close()
 
 
 def test_login_returns_access_token(
@@ -98,10 +142,14 @@ def test_login_rejects_wrong_password(
     )
 
     assert response.status_code == 401
-    assert response.json()["detail"] == "Incorrect email or password"
+    assert response.json()["detail"] == (
+        "Incorrect email or password"
+    )
 
 
-def test_me_requires_authentication(client: TestClient):
+def test_me_requires_authentication(
+    client: TestClient,
+):
     response = client.get("/identity/me")
 
     # HTTPBearer returns 403 when the Authorization header is missing.
