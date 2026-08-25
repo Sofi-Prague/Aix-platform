@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
 
-    allowed_origins: str = "http://localhost:3000,https://aix-platform-alpha.vercel.app/"
+    allowed_origins: str = "http://localhost:3000,https://aix-platform-alpha.vercel.app"
 
     cloudflare_account_id: str | None = None
     cloudflare_ai_token: str | None = None
