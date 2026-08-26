@@ -573,16 +573,6 @@ def delete_data_source(
     ),
     response_model=NormalizationResponse,
 )
-
-@router.get(
-    (
-        "/indexes/{index_slug}"
-        "/dimensions/{dimension_id}"
-        "/indicators/{indicator_id}"
-        "/normalize"
-    ),
-    response_model=NormalizationResponse,
-)
 def normalize_indicator_data(
     index_slug: str,
     dimension_id: uuid.UUID,

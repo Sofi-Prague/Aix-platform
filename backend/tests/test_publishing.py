@@ -3,7 +3,14 @@ import uuid
 from fastapi.testclient import TestClient
 
 from app.core.db import SessionLocal
-from app.core.models import Dimension, Index, Indicator
+from app.core.models import (
+    DataPoint,
+    DataSource,
+    Dimension,
+    Index,
+    Indicator,
+    WeightingConfig,
+)
 
 
 def create_test_index(
@@ -87,6 +94,56 @@ def create_ready_indicator(
         db.close()
 
 
+
+
+def make_index_publishable(
+    *,
+    index: Index,
+    indicator: Indicator,
+) -> None:
+    """Add the data and weighting required by the current publish checklist."""
+    db = SessionLocal()
+
+    try:
+        source = DataSource(
+            indicator_id=indicator.id,
+            name="Publishing test data",
+            source_type="csv",
+            original_filename="publishing-test.csv",
+        )
+        db.add(source)
+        db.flush()
+
+        db.add_all([
+            DataPoint(
+                data_source_id=source.id,
+                indicator_id=indicator.id,
+                entity="Entity A",
+                period="2025",
+                value=10.0,
+            ),
+            DataPoint(
+                data_source_id=source.id,
+                indicator_id=indicator.id,
+                entity="Entity B",
+                period="2025",
+                value=20.0,
+            ),
+        ])
+
+        db.add(
+            WeightingConfig(
+                index_id=index.id,
+                method="equal",
+                config={},
+            )
+        )
+
+        db.commit()
+    finally:
+        db.close()
+
+
 def test_publish_ping_is_public(
     client: TestClient,
 ):
@@ -159,8 +216,13 @@ def test_complete_index_can_publish(
         index_id=str(index.id),
     )
 
-    create_ready_indicator(
+    indicator = create_ready_indicator(
         dimension_id=str(dimension.id),
+    )
+
+    make_index_publishable(
+        index=index,
+        indicator=indicator,
     )
 
     validate_response = client.get(
@@ -221,8 +283,13 @@ def test_published_index_cannot_be_published_again(
         index_id=str(index.id),
     )
 
-    create_ready_indicator(
+    indicator = create_ready_indicator(
         dimension_id=str(dimension.id),
+    )
+
+    make_index_publishable(
+        index=index,
+        indicator=indicator,
     )
 
     first_response = client.post(
