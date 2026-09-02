@@ -5,6 +5,8 @@ import { useState } from "react";
 import {
   createDimension,
   createIndicator,
+  getDimensions,
+  getIndicators,
   suggestDimensions,
   suggestIndicators,
   type DimensionRecord,
@@ -98,12 +100,26 @@ export function AICopilot({
     setError("");
 
     try {
+      const existingDimensions = await getDimensions(
+        selectedIndex.slug,
+      );
+
+      const nextOrderPosition =
+        existingDimensions.length === 0
+          ? 0
+          : Math.max(
+              ...existingDimensions.map(
+                (dimension) =>
+                  dimension.order_position,
+              ),
+            ) + 1;
+
       await createDimension(
         selectedIndex.slug,
         {
           name: suggestion.name,
           description: suggestion.description,
-          order_position: 0,
+          order_position: nextOrderPosition,
         },
       );
 
@@ -137,6 +153,21 @@ export function AICopilot({
     setError("");
 
     try {
+      const existingIndicators = await getIndicators(
+        selectedIndex.slug,
+        selectedDimension.id,
+      );
+
+      const nextOrderPosition =
+        existingIndicators.length === 0
+          ? 0
+          : Math.max(
+              ...existingIndicators.map(
+                (indicator) =>
+                  indicator.order_position,
+              ),
+            ) + 1;
+
       await createIndicator(
         selectedIndex.slug,
         selectedDimension.id,
@@ -147,7 +178,7 @@ export function AICopilot({
           directionality:
             suggestion.directionality,
           status: "draft",
-          order_position: 0,
+          order_position: nextOrderPosition,
         },
       );
 
