@@ -77,22 +77,22 @@ export function DataSourceManager({
   const [message, setMessage] =
     useState("");
 
-  const [
-    normalizedData,
-    setNormalizedData,
-  ] = useState<NormalizationResponse | null>(
-    null,
-  );
+    const [
+      normalizedData,
+      setNormalizedData,
+    ] = useState<NormalizationResponse | null>(
+      null,
+    );
 
-  const [
-    isLoadingNormalization,
-    setIsLoadingNormalization,
-  ] = useState(false);
+    const [
+      isLoadingNormalization,
+      setIsLoadingNormalization,
+    ] = useState(false);
 
-  const [
-    dataView,
-    setDataView,
-  ] = useState<"raw" | "normalized">("raw");
+    const [
+      dataView,
+      setDataView,
+    ] = useState<"raw" | "normalized">("raw");
 
 useEffect(() => {
   let cancelled = false;
@@ -669,6 +669,80 @@ useEffect(() => {
             </div>
           ) : normalizedData ? (
             <>
+              <div
+                style={{
+                  padding: "var(--aix-space-md)",
+                  marginBottom: "var(--aix-space-md)",
+                  border:
+                    "1px solid var(--aix-color-border)",
+                  borderRadius:
+                    "var(--aix-radius-sm)",
+                  background:
+                    "var(--aix-color-surface)",
+                }}
+              >
+                <strong>
+                  Normalization method: Min-Max (0–1)
+                </strong>
+
+                <p
+                  style={{
+                    margin:
+                      "var(--aix-space-sm) 0 0",
+                    color:
+                      "var(--aix-color-text-muted)",
+                    fontSize: "13px",
+                  }}
+                >
+                  Values are normalized independently
+                  within each period using the minimum
+                  and maximum values for that period.
+                </p>
+
+                <div
+                  style={{
+                    marginTop:
+                      "var(--aix-space-sm)",
+                    fontSize: "13px",
+                  }}
+                >
+                  {normalizedData.directionality ===
+                  "higher_is_better" ? (
+                    <>
+                      <strong>
+                        Higher is better:
+                      </strong>{" "}
+                      <code>
+                        (x - min) / (max - min)
+                      </code>
+                    </>
+                  ) : (
+                    <>
+                      <strong>
+                        Lower is better:
+                      </strong>{" "}
+                      <code>
+                        (max - x) / (max - min)
+                      </code>
+                    </>
+                  )}
+                </div>
+
+                <p
+                  style={{
+                    margin:
+                      "var(--aix-space-sm) 0 0",
+                    color:
+                      "var(--aix-color-text-muted)",
+                    fontSize: "12px",
+                  }}
+                >
+                  If every value in a period is equal,
+                  AIX assigns a normalized score of 1.0
+                  to each observation.
+                </p>
+              </div>
+
               <div
                 style={{
                   display: "flex",
