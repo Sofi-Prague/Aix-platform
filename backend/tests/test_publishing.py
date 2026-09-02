@@ -398,6 +398,7 @@ def test_public_endpoint_returns_published_index(
     assert body["name"] == "Publishing Test Index"
     assert body["slug"] == slug
     assert body["status"] == "published"
+    assert body["updated_at"]
     assert body["normalization_method"] == "min_max_0_1"
     assert body["weighting_method"] == "equal"
     assert len(body["periods"]) == 1
@@ -422,6 +423,7 @@ def test_public_endpoint_returns_published_index(
     returned_dimension = body["dimensions"][0]
 
     assert returned_dimension["name"] == "Test Dimension"
+    assert returned_dimension["weight"] == 1.0
     assert len(returned_dimension["indicators"]) == 1
 
     returned_indicator = (
@@ -430,6 +432,20 @@ def test_public_endpoint_returns_published_index(
 
     assert returned_indicator["name"] == "GDP Growth"
     assert returned_indicator["unit"] == "%"
+    assert returned_indicator["weight"] == 1.0
+    assert len(returned_indicator["sources"]) == 1
+
+    returned_source = returned_indicator["sources"][0]
+    assert returned_source["name"] == "Publishing test data"
+    assert returned_source["original_filename"] == "publishing-test.csv"
+    assert returned_source["periods_covered"] == ["2025"]
+    assert returned_source["entities_covered"] == [
+        "Entity A",
+        "Entity B",
+    ]
+    assert returned_source["observation_count"] == 2
+    assert returned_source["imported_at"]
+    assert returned_source["last_updated"]
     assert (
         returned_indicator["directionality"]
         == "higher_is_better"

@@ -7,6 +7,15 @@ AIX is a web platform for creating, managing, calculating, validating, and publi
 - Luke Zammit — Lead Full Stack Engineer
 - Ognjen Jovic — Interactive Experience Engineer
 
+## Production Access
+
+- Frontend: https://aix-platform-alpha.vercel.app
+- Backend: Render-hosted FastAPI service configured through the frontend `NEXT_PUBLIC_API_URL` environment variable
+- Database: Supabase PostgreSQL
+- AI provider: Cloudflare Workers AI
+
+Production credentials and secrets are intentionally not stored in the repository.
+
 ## Current Status
 
 The founding AIX workflow is operational end to end. An authenticated author can:
@@ -23,8 +32,10 @@ The founding AIX workflow is operational end to end. An authenticated author can
 10. Review methodology against the publication validation checklist.
 11. Publish a completed index.
 12. View the published index through a public, read-only page without authentication.
+13. Review public rankings, final scores, normalization method, weights, source provenance, and publication timestamp.
+14. Automatically return a published index to Draft when methodology, data, weighting, or core metadata changes, requiring recalculation, validation, and republication.
 
-The core application has completed final regression validation with **83/83 backend tests passing**, a clean frontend ESLint run, and a successful optimized Next.js production build.
+The core application has completed regression validation with the current backend test suite passing, a clean frontend ESLint run, and a successful optimized Next.js production build. The closure changes add publication-integrity, provenance, public-results, transparency, and UX safeguards beyond the original 83-test baseline.
 
 ## Architecture
 
@@ -119,7 +130,13 @@ Netherlands,2025,98
 
 ### Normalization, Weighting & Calculation
 
-AIX supports higher-is-better and lower-is-better indicator directionality, normalization by period, equal weighting, and custom weighting. Calculation validates coverage and weighting before producing composite scores and rankings.
+AIX uses **Min-Max normalization on a 0–1 scale**, independently within each period.
+
+- Higher is better: `(x - min) / (max - min)`
+- Lower is better: `(max - x) / (max - min)`
+- If every value in a period is equal, each observation receives a normalized value of `1.0`.
+
+AIX supports equal weighting and custom weighting at both dimension and indicator level. The Results workflow preserves the calculation chain **Raw value → Normalized value → Indicator weight → Indicator contribution → Dimension score → Dimension weight → Final score**. Calculation validates dataset coverage and weighting before producing composite scores and rankings.
 
 ### AI Co-Pilot
 
@@ -127,7 +144,9 @@ The methodology Co-Pilot can generate contextual dimension and indicator suggest
 
 ### Publishing
 
-Publishing is protected by a validation gate. Incomplete indexes cannot be published. Once the required methodology and data conditions are satisfied, the index can transition to published status and becomes available through the public read-only endpoint and `/published/[slug]` frontend route.
+Publishing is protected by a 14-check validation gate. `Published` cannot be selected through ordinary index editing; publication only occurs through the dedicated validation/publish workflow. Any later change to index metadata, dimensions, indicators, source data, or weighting returns a published index to `Draft`, removing it from the public endpoint until it is recalculated, validated, and published again.
+
+The public `/published/[slug]` page presents ranked results, period, normalization and weighting methodology, dimension/indicator weights, source provenance, and the current publication timestamp.
 
 ### Notifications and Analytics/Audit
 
@@ -235,13 +254,15 @@ cd backend
 python -m pytest -v
 ```
 
-Latest final validation result:
+Run the full current suite and record the exact pass count in `docs/PRODUCTION_VERIFICATION_CHECKLIST.md` before final handover.
 
-```text
-83 passed
+To run everything except AI-provider tests:
+
+```powershell
+python -m pytest -v --ignore=tests/test_ai_orchestration.py
 ```
 
-The suite covers authentication, tenant isolation, index CRUD, dimensions, indicators, CSV ingestion, normalization, weighting, calculation, AI orchestration, publishing validation, and public access behavior.
+The suite covers authentication, tenant isolation, index CRUD, dimensions, indicators, CSV ingestion, normalization, weighting, calculation, publication-integrity safeguards, AI orchestration, publishing validation, and public access behavior.
 
 ### Frontend lint
 
@@ -331,6 +352,11 @@ The founding pilot's core workflow is complete, but the following remain appropr
 - Stronger production token/session storage strategy
 - Expanded accessibility, observability, audit logging, and operational monitoring
 - Broader AI orchestration and richer methodology assistance
+- Direct external data integrations such as World Bank / Eurostat
+- Methodology versioning, calculation history, audit trail, missing-data policies, coverage thresholds, and sensitivity analysis
+- Public visualizations such as ranking charts, time series, country comparisons, dimension breakdowns, and radar charts
+- CSV/XLSX results exports and downloadable methodology/results reports
+- Additional normalization/weighting methods only where academically justified
 - Additional production-scale performance and security hardening
 
 These items do not prevent the current core index-authoring, data, calculation, AI-assisted methodology, validation, and publishing workflow from operating.

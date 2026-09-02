@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  FormEvent,
-  useEffect,
-  useState,
-} from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 import {
   createDimension,
@@ -38,10 +34,23 @@ type DimensionManagerProps = {
   onMethodologyChange: () => void;
 };
 
-type FormMode =
-  | "closed"
-  | "create"
-  | "edit";
+type FormMode = "closed" | "create" | "edit";
+
+function focusEditor(fieldId: string): void {
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      const field =
+        document.getElementById(fieldId);
+
+      field?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      field?.focus();
+    });
+  });
+}
 
 export function DimensionManager({
   selectedIndex,
@@ -52,110 +61,67 @@ export function DimensionManager({
   onSelectIndicator,
   onMethodologyChange,
 }: DimensionManagerProps) {
-  const [
-    dimensions,
-    setDimensions,
-  ] = useState<DimensionRecord[]>([]);
+  const [dimensions, setDimensions] = useState<
+    DimensionRecord[]
+  >([]);
 
   const [mode, setMode] =
     useState<FormMode>("closed");
 
-  const [
-    isDimensionListOpen,
-    setIsDimensionListOpen,
-  ] = useState(false);
+  const [editingDimension, setEditingDimension] =
+    useState<DimensionRecord | null>(null);
 
-  const [
-    editingDimension,
-    setEditingDimension,
-  ] =
-    useState<DimensionRecord | null>(
-      null,
-    );
-
-  const [name, setName] =
+  const [name, setName] = useState("");
+  const [description, setDescription] =
     useState("");
+  const [orderPosition, setOrderPosition] =
+    useState(0);
 
-  const [
-    description,
-    setDescription,
-  ] = useState("");
+  const [isLoading, setIsLoading] =
+    useState(false);
+  const [isSaving, setIsSaving] =
+    useState(false);
 
-  const [
-    orderPosition,
-    setOrderPosition,
-  ] = useState(0);
+  const [deletingId, setDeletingId] =
+    useState<string | null>(null);
 
-  const [
-    isLoading,
-    setIsLoading,
-  ] = useState(false);
-
-  const [
-    isSaving,
-    setIsSaving,
-  ] = useState(false);
-
-  const [
-    deletingId,
-    setDeletingId,
-  ] = useState<string | null>(
-    null,
-  );
-
-  const [error, setError] =
-    useState("");
-
-  const [message, setMessage] =
-    useState("");
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
-    if (!selectedIndex) {
-      return;
-    }
-
-    let cancelled = false;
-
     async function loadDimensions(): Promise<void> {
+      if (!selectedIndex) {
+        setDimensions([]);
+        setMode("closed");
+        setEditingDimension(null);
+        return;
+      }
+
       setIsLoading(true);
+      setError("");
+      setMessage("");
+      setMode("closed");
+      setEditingDimension(null);
 
       try {
-        const result =
-          await getDimensions(
-            selectedIndex!.slug,
-          );
+        const result = await getDimensions(
+          selectedIndex.slug,
+        );
 
-        if (!cancelled) {
-          setDimensions(result);
-          setError("");
-          setMessage("");
-          setMode("closed");
-          setEditingDimension(null);
-        }
+        setDimensions(result);
       } catch (caughtError) {
-        if (!cancelled) {
-          setError(
-            caughtError instanceof Error
-              ? caughtError.message
-              : "Unable to load dimensions.",
-          );
-        }
+        setError(
+          caughtError instanceof Error
+            ? caughtError.message
+            : "Unable to load dimensions.",
+        );
       } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
       }
     }
 
     void loadDimensions();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    selectedIndex,
-    methodologyVersion,
-  ]);
+  }, [selectedIndex, methodologyVersion]);
 
   function resetForm(): void {
     setMode("closed");
@@ -184,61 +150,27 @@ export function DimensionManager({
     setError("");
     setMessage("");
     setMode("create");
-
-    setIsDimensionListOpen(true);
+    focusEditor("dimension-name");
   }
 
   function beginEdit(
     dimension: DimensionRecord,
   ): void {
-    setEditingDimension(
-      dimension,
-    );
-
-    setName(
-      dimension.name,
-    );
-
+    setEditingDimension(dimension);
+    setName(dimension.name);
     setDescription(
       dimension.description ?? "",
     );
-
     setOrderPosition(
       dimension.order_position,
     );
-
     setError("");
     setMessage("");
     setMode("edit");
 
-    onSelectDimension(
-      dimension,
-    );
-
+    onSelectDimension(dimension);
     onSelectIndicator(null);
-
-    setIsDimensionListOpen(
-      false,
-    );
-  }
-
-  function handleSelectDimension(
-    dimension: DimensionRecord,
-  ): void {
-    onSelectDimension(
-      dimension,
-    );
-
-    onSelectIndicator(null);
-
-    setIsDimensionListOpen(
-      false,
-    );
-
-    setMode("closed");
-    setEditingDimension(null);
-    setError("");
-    setMessage("");
+    focusEditor("dimension-name");
   }
 
   async function handleSubmit(
@@ -268,27 +200,16 @@ export function DimensionManager({
             },
           );
 
-        setDimensions(
-          (current) =>
-            [
-              ...current,
-              created,
-            ].sort(
-              (first, second) =>
-                first.order_position -
-                second.order_position,
-            ),
+        setDimensions((current) =>
+          [...current, created].sort(
+            (first, second) =>
+              first.order_position -
+              second.order_position,
+          ),
         );
 
-        onSelectDimension(
-          created,
-        );
-
+        onSelectDimension(created);
         onSelectIndicator(null);
-
-        setIsDimensionListOpen(
-          false,
-        );
 
         onMethodologyChange();
 
@@ -314,32 +235,23 @@ export function DimensionManager({
             },
           );
 
-        setDimensions(
-          (current) =>
-            current
-              .map(
-                (dimension) =>
-                  dimension.id ===
-                  updated.id
-                    ? updated
-                    : dimension,
-              )
-              .sort(
-                (first, second) =>
-                  first.order_position -
-                  second.order_position,
-              ),
+        setDimensions((current) =>
+          current
+            .map((dimension) =>
+              dimension.id ===
+              updated.id
+                ? updated
+                : dimension,
+            )
+            .sort(
+              (first, second) =>
+                first.order_position -
+                second.order_position,
+            ),
         );
 
-        onSelectDimension(
-          updated,
-        );
-
+        onSelectDimension(updated);
         onSelectIndicator(null);
-
-        setIsDimensionListOpen(
-          false,
-        );
 
         onMethodologyChange();
 
@@ -371,19 +283,15 @@ export function DimensionManager({
       return;
     }
 
-    const confirmed =
-      window.confirm(
-        `Delete "${dimension.name}"? Any indicators inside it will also be removed.`,
-      );
+    const confirmed = window.confirm(
+      `Delete "${dimension.name}"? Any indicators inside it will also be removed.`,
+    );
 
     if (!confirmed) {
       return;
     }
 
-    setDeletingId(
-      dimension.id,
-    );
-
+    setDeletingId(dimension.id);
     setError("");
     setMessage("");
 
@@ -393,30 +301,19 @@ export function DimensionManager({
         dimension.id,
       );
 
-      setDimensions(
-        (current) =>
-          current.filter(
-            (item) =>
-              item.id !==
-              dimension.id,
-          ),
+      setDimensions((current) =>
+        current.filter(
+          (item) =>
+            item.id !== dimension.id,
+        ),
       );
 
       if (
         selectedDimension?.id ===
         dimension.id
       ) {
-        onSelectDimension(
-          null,
-        );
-
-        onSelectIndicator(
-          null,
-        );
-
-        setIsDimensionListOpen(
-          true,
-        );
+        onSelectDimension(null);
+        onSelectIndicator(null);
       }
 
       if (
@@ -460,9 +357,7 @@ export function DimensionManager({
           alignItems: "center",
           justifyContent:
             "space-between",
-          flexWrap: "wrap",
-          gap:
-            "var(--aix-space-sm)",
+          gap: "var(--aix-space-sm)",
           marginBottom:
             "var(--aix-space-md)",
         }}
@@ -523,22 +418,23 @@ export function DimensionManager({
 
       {mode !== "closed" && (
         <form
-          onSubmit={
-            handleSubmit
-          }
+          onSubmit={handleSubmit}
           style={{
             display: "grid",
-            gap:
-              "var(--aix-space-md)",
+            gap: "var(--aix-space-md)",
             marginBlock:
               "var(--aix-space-md)",
+            padding:
+              "var(--aix-space-md)",
+            border:
+              "2px solid var(--aix-color-primary)",
+            borderRadius:
+              "var(--aix-radius-sm)",
+            background:
+              "var(--aix-color-surface)",
           }}
         >
-          <h3
-            style={{
-              margin: 0,
-            }}
-          >
+          <h3 style={{ margin: 0 }}>
             {mode === "create"
               ? "Add dimension"
               : "Edit dimension"}
@@ -579,8 +475,7 @@ export function DimensionManager({
               }
               style={{
                 width: "100%",
-                padding:
-                  "10px 12px",
+                padding: "10px 12px",
                 border:
                   "1px solid var(--aix-color-border)",
                 borderRadius:
@@ -617,9 +512,7 @@ export function DimensionManager({
           >
             <Button
               type="submit"
-              isLoading={
-                isSaving
-              }
+              isLoading={isSaving}
             >
               {mode === "create"
                 ? "Create dimension"
@@ -629,9 +522,7 @@ export function DimensionManager({
             <Button
               type="button"
               variant="secondary"
-              onClick={
-                resetForm
-              }
+              onClick={resetForm}
             >
               Cancel
             </Button>
@@ -643,34 +534,6 @@ export function DimensionManager({
         <StatusMessage
           type="loading"
           title="Loading dimensions…"
-        />
-      ) : selectedDimension &&
-        !isDimensionListOpen ? (
-        <SelectedDimensionCard
-          dimension={
-            selectedDimension
-          }
-          onChange={() => {
-            setIsDimensionListOpen(
-              true,
-            );
-
-            setMode(
-              "closed",
-            );
-
-            setEditingDimension(
-              null,
-            );
-
-            setError("");
-            setMessage("");
-          }}
-          onEdit={() =>
-            beginEdit(
-              selectedDimension,
-            )
-          }
         />
       ) : dimensions.length === 0 ? (
         <StatusMessage
@@ -697,16 +560,13 @@ export function DimensionManager({
 
               return (
                 <li
-                  key={
-                    dimension.id
-                  }
+                  key={dimension.id}
                   style={{
                     padding:
                       "var(--aix-space-sm)",
-                    border:
-                      isSelected
-                        ? "2px solid var(--aix-color-primary)"
-                        : "1px solid var(--aix-color-border)",
+                    border: isSelected
+                      ? "2px solid var(--aix-color-primary)"
+                      : "1px solid var(--aix-color-border)",
                     borderRadius:
                       "var(--aix-radius-sm)",
                     background:
@@ -715,29 +575,27 @@ export function DimensionManager({
                 >
                   <button
                     type="button"
-                    onClick={() =>
-                      handleSelectDimension(
+                    onClick={() => {
+                      onSelectDimension(
                         dimension,
-                      )
-                    }
+                      );
+                      onSelectIndicator(
+                        null,
+                      );
+                    }}
                     style={{
                       width: "100%",
                       border: 0,
                       padding: 0,
-                      textAlign:
-                        "left",
+                      textAlign: "left",
                       background:
                         "transparent",
-                      cursor:
-                        "pointer",
-                      color:
-                        "inherit",
+                      cursor: "pointer",
+                      color: "inherit",
                     }}
                   >
                     <strong>
-                      {
-                        dimension.name
-                      }
+                      {dimension.name}
                     </strong>
 
                     <p
@@ -774,10 +632,8 @@ export function DimensionManager({
 
                   <div
                     style={{
-                      display:
-                        "flex",
-                      flexWrap:
-                        "wrap",
+                      display: "flex",
+                      flexWrap: "wrap",
                       gap:
                         "var(--aix-space-sm)",
                       marginTop:
@@ -824,9 +680,7 @@ export function DimensionManager({
 
       {selectedDimension && (
         <IndicatorManager
-          selectedIndex={
-            selectedIndex
-          }
+          selectedIndex={selectedIndex}
           selectedDimension={
             selectedDimension
           }
@@ -844,88 +698,6 @@ export function DimensionManager({
           }
         />
       )}
-    </div>
-  );
-}
-
-function SelectedDimensionCard({
-  dimension,
-  onChange,
-  onEdit,
-}: {
-  dimension: DimensionRecord;
-  onChange: () => void;
-  onEdit: () => void;
-}) {
-  return (
-    <div
-      style={{
-        padding:
-          "var(--aix-space-sm)",
-        border:
-          "2px solid var(--aix-color-primary)",
-        borderRadius:
-          "var(--aix-radius-sm)",
-        background:
-          "var(--aix-color-surface)",
-        marginBottom:
-          "var(--aix-space-md)",
-      }}
-    >
-      <strong>
-        {dimension.name}
-      </strong>
-
-      <p
-        style={{
-          margin: "4px 0",
-          color:
-            "var(--aix-color-text-muted)",
-        }}
-      >
-        Position{" "}
-        {dimension.order_position}
-      </p>
-
-      {dimension.description && (
-        <p
-          style={{
-            margin: "4px 0 0",
-            color:
-              "var(--aix-color-text-muted)",
-            fontSize: "13px",
-          }}
-        >
-          {dimension.description}
-        </p>
-      )}
-
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap:
-            "var(--aix-space-sm)",
-          marginTop:
-            "var(--aix-space-sm)",
-        }}
-      >
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={onChange}
-        >
-          Change dimension
-        </Button>
-
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={onEdit}
-        >
-          Edit
-        </Button>
-      </div>
     </div>
   );
 }

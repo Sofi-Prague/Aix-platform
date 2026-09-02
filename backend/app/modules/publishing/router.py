@@ -1304,6 +1304,7 @@ def get_public_index(
             index.description
         ),
         status=index.status,
+        updated_at=index.updated_at,
         normalization_method="min_max_0_1",
         weighting_method=(
             calculation.weighting_method

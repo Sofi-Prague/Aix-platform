@@ -78,6 +78,7 @@ class PublicIndexOut(BaseModel):
     slug: str
     description: str | None = None
     status: str
+    updated_at: datetime
     normalization_method: str
     weighting_method: str
     periods: list[PublicPeriodOut]

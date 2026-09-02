@@ -16,6 +16,7 @@ import {
   updateIndicator,
 } from "../lib/api";
 
+import { DataSourceManager } from "./DataSourceManager";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { StatusMessage } from "./ui/StatusMessage";
@@ -42,6 +43,22 @@ type Directionality =
   | "higher_is_better"
   | "lower_is_better"
   | "";
+
+function focusEditor(fieldId: string): void {
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      const field =
+        document.getElementById(fieldId);
+
+      field?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      field?.focus();
+    });
+  });
+}
 
 export function IndicatorManager({
   selectedIndex,
@@ -964,6 +981,24 @@ export function IndicatorManager({
           )}
         </ul>
       )}
+
+      {selectedIndicator &&
+        !isIndicatorListOpen && (
+          <DataSourceManager
+            key={
+              selectedIndicator.id
+            }
+            selectedIndex={
+              selectedIndex
+            }
+            selectedDimension={
+              selectedDimension
+            }
+            selectedIndicator={
+              selectedIndicator
+            }
+          />
+        )}
     </section>
   );
 }

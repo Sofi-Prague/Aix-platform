@@ -177,6 +177,38 @@ export function IndexWorkspaceShell({
         <section
           className="index-workspace-content"
         >
+          <div
+            aria-label="Index workflow"
+            style={{
+              marginBottom:
+                "var(--aix-space-md)",
+              padding:
+                "var(--aix-space-sm) var(--aix-space-md)",
+              border:
+                "1px solid var(--aix-color-border)",
+              borderRadius:
+                "var(--aix-radius-sm)",
+              background:
+                "var(--aix-color-surface)",
+              color:
+                "var(--aix-color-text-muted)",
+              fontSize: "13px",
+              lineHeight: 1.6,
+            }}
+          >
+            <strong
+              style={{
+                color:
+                  "var(--aix-color-text)",
+              }}
+            >
+              Workflow:
+            </strong>{" "}
+            1. Define → 2. Indicators → 3. Data
+            → 4. Weight → 5. Calculate →
+            6. Validate → 7. Publish
+          </div>
+
           <nav
             className="workspace-main-tabs"
             aria-label="Index workspace views"

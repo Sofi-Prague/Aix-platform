@@ -134,6 +134,41 @@ export default function PublishedIndexPage() {
           )}
         </header>
 
+        <section
+          aria-label="Published index overview"
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: "var(--aix-space-md)",
+            marginBottom: "var(--aix-space-xl)",
+          }}
+        >
+          <SummaryCard
+            label="Latest period"
+            value={
+              periods[0]?.period ??
+              "No calculated period"
+            }
+            detail="The most recent calculated period available in this publication."
+          />
+          <SummaryCard
+            label="Dimensions"
+            value={String(index.dimensions.length)}
+            detail={`${countIndicators(index)} indicators across the published methodology.`}
+          />
+          <SummaryCard
+            label="Data sources"
+            value={String(countSources(index))}
+            detail="Source metadata is listed under each published indicator."
+          />
+          <SummaryCard
+            label="Last updated"
+            value={formatDateTime(index.updated_at)}
+            detail="Timestamp of the current published index state."
+          />
+        </section>
+
         <section style={{ marginBottom: "var(--aix-space-xl)" }}>
           <h2>Results</h2>
 
@@ -206,6 +241,38 @@ export default function PublishedIndexPage() {
               ))}
             </div>
           )}
+        </section>
+
+        <section
+          style={{
+            marginBottom: "var(--aix-space-xl)",
+            padding: "var(--aix-space-md)",
+            border:
+              "1px solid var(--aix-color-border)",
+            borderRadius:
+              "var(--aix-radius-sm)",
+            background:
+              "var(--aix-color-surface)",
+          }}
+        >
+          <strong>Published methodology state</strong>
+          <p
+            style={{
+              margin:
+                "var(--aix-space-sm) 0 0",
+              color:
+                "var(--aix-color-text-muted)",
+              fontSize: "13px",
+              lineHeight: 1.6,
+            }}
+          >
+            This page represents the currently published
+            index state. Changes to methodology, data,
+            weighting, or core index metadata return the
+            index to Draft and require recalculation,
+            validation, and republication before they
+            become public again.
+          </p>
         </section>
 
         <section style={{ marginBottom: "var(--aix-space-xl)" }}>
@@ -529,6 +596,32 @@ function DetailField({
       </dt>
       <dd style={{ margin: "4px 0 0" }}>{children}</dd>
     </div>
+  );
+}
+
+function countIndicators(
+  index: PublicIndexRecord,
+): number {
+  return index.dimensions.reduce(
+    (total, dimension) =>
+      total + dimension.indicators.length,
+    0,
+  );
+}
+
+function countSources(
+  index: PublicIndexRecord,
+): number {
+  return index.dimensions.reduce(
+    (dimensionTotal, dimension) =>
+      dimensionTotal +
+      dimension.indicators.reduce(
+        (indicatorTotal, indicator) =>
+          indicatorTotal +
+          indicator.sources.length,
+        0,
+      ),
+    0,
   );
 }
 

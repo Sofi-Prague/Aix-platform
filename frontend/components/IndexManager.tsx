@@ -40,6 +40,23 @@ function makeSlug(value: string): string {
     .replace(/-+/g, "-");
 }
 
+
+function focusEditor(fieldId: string): void {
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(() => {
+      const field =
+        document.getElementById(fieldId);
+
+      field?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      field?.focus();
+    });
+  });
+}
+
 export function IndexManager({
   indexes,
   selectedIndex,
@@ -89,6 +106,7 @@ export function IndexManager({
     resetForm();
     setMessage("");
     setMode("create");
+    focusEditor("index-name");
   }
 
   function beginEdit(
@@ -108,6 +126,7 @@ export function IndexManager({
     setError("");
     setMessage("");
     setMode("edit");
+    focusEditor("index-name");
   }
 
   function handleNameChange(
@@ -339,6 +358,14 @@ export function IndexManager({
             maxWidth: "620px",
             marginBlock:
               "var(--aix-space-lg)",
+            padding:
+              "var(--aix-space-lg)",
+            border:
+              "2px solid var(--aix-color-primary)",
+            borderRadius:
+              "var(--aix-radius-sm)",
+            background:
+              "var(--aix-color-surface)",
           }}
         >
           <h2
