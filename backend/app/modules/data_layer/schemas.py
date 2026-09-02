@@ -34,11 +34,16 @@ class DataSourceOut(BaseModel):
 
 class DataSourceDetailOut(DataSourceOut):
     data_points: list[DataPointOut]
+    observation_count: int
+    periods_covered: list[str]
+    entities_covered: list[str]
+    last_updated: datetime
 
 
 class CSVUploadResponse(BaseModel):
     data_source: DataSourceOut
     rows_imported: int
+
 
 class NormalizedDataPointOut(BaseModel):
     entity: str

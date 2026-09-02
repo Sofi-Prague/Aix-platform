@@ -483,6 +483,18 @@ useEffect(() => {
                     source.source_type}
                 </p>
 
+                <p
+                  style={{
+                    margin: "4px 0",
+                    color:
+                      "var(--aix-color-text-muted)",
+                    fontSize: "13px",
+                  }}
+                >
+                  Imported{" "}
+                  {formatDateTime(source.created_at)}
+                </p>
+
                 {source.source_url && (
                   <p
                     style={{
@@ -570,15 +582,73 @@ useEffect(() => {
             }}
           >
             {
-              selectedSource.data_points
-                .length
+              selectedSource.observation_count
             }{" "}
             observation
-            {selectedSource.data_points
-              .length === 1
+            {selectedSource.observation_count === 1
               ? ""
               : "s"}
           </p>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(180px, 1fr))",
+              gap: "var(--aix-space-sm)",
+              padding: "var(--aix-space-md)",
+              marginBottom: "var(--aix-space-md)",
+              border:
+                "1px solid var(--aix-color-border)",
+              borderRadius:
+                "var(--aix-radius-sm)",
+              background:
+                "var(--aix-color-surface)",
+              fontSize: "13px",
+            }}
+          >
+            <ProvenanceField
+              label="Original filename"
+              value={
+                selectedSource.original_filename ??
+                "Not recorded"
+              }
+            />
+            <ProvenanceField
+              label="Imported"
+              value={formatDateTime(
+                selectedSource.created_at,
+              )}
+            />
+            <ProvenanceField
+              label="Last updated"
+              value={formatDateTime(
+                selectedSource.last_updated,
+              )}
+            />
+            <ProvenanceField
+              label="Periods covered"
+              value={
+                selectedSource.periods_covered.join(
+                  ", ",
+                ) || "None"
+              }
+            />
+            <ProvenanceField
+              label="Entities covered"
+              value={
+                selectedSource.entities_covered.join(
+                  ", ",
+                ) || "None"
+              }
+            />
+            <ProvenanceField
+              label="Observations"
+              value={String(
+                selectedSource.observation_count,
+              )}
+            />
+          </div>
 
           <div
             style={{
@@ -928,6 +998,48 @@ useEffect(() => {
       </form>
     </section>
   );
+}
+
+
+function ProvenanceField({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div>
+      <strong>{label}</strong>
+      <div
+        style={{
+          marginTop: "4px",
+          color:
+            "var(--aix-color-text-muted)",
+          overflowWrap: "anywhere",
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+
+function formatDateTime(value: string): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat(
+    undefined,
+    {
+      dateStyle: "medium",
+      timeStyle: "short",
+    },
+  ).format(date);
 }
 
 

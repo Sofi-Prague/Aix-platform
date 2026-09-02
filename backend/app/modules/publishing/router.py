@@ -29,6 +29,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.core.models import (
     DataPoint,
+    DataSource,
     Dimension,
     Index,
     Indicator,
@@ -43,6 +44,7 @@ from app.modules.methodology_engine.calculation_router import (
     calculate_index_record,
 )
 from app.modules.publishing.schemas import (
+    PublicDataSourceOut,
     PublicDimensionOut,
     PublicIndexOut,
     PublicIndicatorOut,
@@ -1063,6 +1065,48 @@ def get_public_index(
         .all()
     )
 
+    weighting = (
+        db.query(WeightingConfig)
+        .filter(
+            WeightingConfig.index_id
+            == index.id
+        )
+        .order_by(
+            WeightingConfig.created_at.desc()
+        )
+        .first()
+    )
+
+    if weighting is None:
+        raise HTTPException(
+            status_code=(
+                status.HTTP_409_CONFLICT
+            ),
+            detail=(
+                "Published index has no weighting configuration."
+            ),
+        )
+
+    custom_dimension_weights = (
+        weighting.config.get(
+            "dimension_weights",
+            {},
+        )
+        if weighting.method == "custom"
+        else {}
+    )
+
+    custom_indicator_weights = (
+        weighting.config.get(
+            "indicator_weights",
+            {},
+        )
+        if weighting.method == "custom"
+        else {}
+    )
+
+    dimension_count = len(dimensions)
+
     public_dimensions: list[
         PublicDimensionOut
     ] = []
@@ -1081,30 +1125,133 @@ def get_public_index(
             .all()
         )
 
-        public_indicators = [
-            PublicIndicatorOut(
-                id=str(
-                    indicator.id
-                ),
-                name=(
-                    indicator.name
-                ),
-                description=(
-                    indicator.description
-                ),
-                unit=(
-                    indicator.unit
-                ),
-                directionality=(
-                    indicator.directionality
-                ),
-                order_position=(
-                    indicator.order_position
-                ),
+        indicator_count = len(indicators)
+
+        public_indicators: list[
+            PublicIndicatorOut
+        ] = []
+
+        for indicator in indicators:
+            sources = (
+                db.query(DataSource)
+                .filter(
+                    DataSource.indicator_id
+                    == indicator.id
+                )
+                .order_by(
+                    DataSource.created_at.asc()
+                )
+                .all()
             )
-            for indicator
-            in indicators
-        ]
+
+            public_sources: list[
+                PublicDataSourceOut
+            ] = []
+
+            for source in sources:
+                source_points = (
+                    db.query(DataPoint)
+                    .filter(
+                        DataPoint.data_source_id
+                        == source.id,
+                        DataPoint.indicator_id
+                        == indicator.id,
+                    )
+                    .all()
+                )
+
+                public_sources.append(
+                    PublicDataSourceOut(
+                        id=str(source.id),
+                        name=source.name,
+                        source_type=(
+                            source.source_type
+                        ),
+                        source_url=(
+                            source.source_url
+                        ),
+                        original_filename=(
+                            source.original_filename
+                        ),
+                        imported_at=(
+                            source.created_at
+                        ),
+                        periods_covered=sorted(
+                            {
+                                point.period
+                                for point
+                                in source_points
+                            }
+                        ),
+                        entities_covered=sorted(
+                            {
+                                point.entity
+                                for point
+                                in source_points
+                            }
+                        ),
+                        observation_count=len(
+                            source_points
+                        ),
+                        last_updated=max(
+                            (
+                                point.created_at
+                                for point
+                                in source_points
+                            ),
+                            default=(
+                                source.created_at
+                            ),
+                        ),
+                    )
+                )
+
+            if weighting.method == "custom":
+                indicator_weight = float(
+                    custom_indicator_weights.get(
+                        str(indicator.id),
+                        0.0,
+                    )
+                )
+            else:
+                indicator_weight = (
+                    1.0 / indicator_count
+                    if indicator_count
+                    else 0.0
+                )
+
+            public_indicators.append(
+                PublicIndicatorOut(
+                    id=str(indicator.id),
+                    name=indicator.name,
+                    description=(
+                        indicator.description
+                    ),
+                    unit=indicator.unit,
+                    directionality=(
+                        indicator.directionality
+                    ),
+                    order_position=(
+                        indicator.order_position
+                    ),
+                    weight=indicator_weight,
+                    sources=public_sources,
+                )
+            )
+
+        if weighting.method == "custom":
+            dimension_weight = float(
+                custom_dimension_weights.get(
+                    str(dimension.id),
+                    0.0,
+                )
+            )
+        else:
+            dimension_weight = (
+                1.0 / dimension_count
+                if dimension_count
+                else 0.0
+            )
 
         public_dimensions.append(
             PublicDimensionOut(
@@ -1120,6 +1267,7 @@ def get_public_index(
                 order_position=(
                     dimension.order_position
                 ),
+                weight=dimension_weight,
                 indicators=(
                     public_indicators
                 ),

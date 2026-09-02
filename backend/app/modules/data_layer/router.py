@@ -537,6 +537,20 @@ def get_data_source(
             DataPointOut.model_validate(point)
             for point in points
         ],
+        observation_count=len(points),
+        periods_covered=sorted(
+            {point.period for point in points}
+        ),
+        entities_covered=sorted(
+            {point.entity for point in points}
+        ),
+        last_updated=max(
+            (
+                point.created_at
+                for point in points
+            ),
+            default=source.created_at,
+        ),
     )
 
 

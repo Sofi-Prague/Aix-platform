@@ -400,6 +400,80 @@ export function WeightingPanel({
       </div>
 
 
+      <section
+        style={{
+          padding: "var(--aix-space-md)",
+          border:
+            "1px solid var(--aix-color-border)",
+          borderRadius:
+            "var(--aix-radius-sm)",
+          background:
+            "var(--aix-color-surface)",
+        }}
+      >
+        <strong>
+          Selected methodology:{" "}
+          {method === "equal"
+            ? "Equal weighting"
+            : "Custom weighting"}
+        </strong>
+
+        <p
+          style={{
+            margin:
+              "var(--aix-space-sm) 0 0",
+            color:
+              "var(--aix-color-text-muted)",
+            fontSize: "13px",
+          }}
+        >
+          {method === "equal"
+            ? "Each dimension receives an equal share of the index weight, and indicators are equally weighted within their dimension."
+            : "The percentages below are the explicit dimension and indicator weights used when this configuration is saved."}
+        </p>
+
+        <div
+          style={{
+            display: "grid",
+            gap: "6px",
+            marginTop:
+              "var(--aix-space-sm)",
+            fontSize: "13px",
+          }}
+        >
+          {dimensions.map((dimension) => (
+            <div key={dimension.id}>
+              <strong>{dimension.name}:</strong>{" "}
+              {formatWeightPercentage(
+                dimensionWeights[
+                  dimension.id
+                ] ?? 0,
+              )}
+              {indicatorGroups
+                .find(
+                  (group) =>
+                    group.dimension.id ===
+                    dimension.id,
+                )
+                ?.indicators.map(
+                  (indicator) => (
+                    <span key={indicator.id}>
+                      {" · "}
+                      {indicator.name}{" "}
+                      {formatWeightPercentage(
+                        indicatorWeights[
+                          indicator.id
+                        ] ?? 0,
+                      )}
+                    </span>
+                  ),
+                )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+
       {error && (
         <StatusMessage
           type="error"
@@ -823,6 +897,13 @@ function totalOf(
       total + value,
     0,
   );
+}
+
+
+function formatWeightPercentage(
+  value: number,
+): string {
+  return `${value.toFixed(2).replace(/\.00$/, "")}%`;
 }
 
 

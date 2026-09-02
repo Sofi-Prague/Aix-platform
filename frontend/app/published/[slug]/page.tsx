@@ -251,7 +251,19 @@ export default function PublishedIndexPage() {
                       : "1px solid var(--aix-color-border)",
                 }}
               >
-                <h3 style={{ fontSize: "24px" }}>{dimension.name}</h3>
+                <h3 style={{ fontSize: "24px" }}>
+                  {dimension.name}
+                  <span
+                    style={{
+                      marginLeft: "10px",
+                      color: "var(--aix-color-text-muted)",
+                      fontSize: "14px",
+                      fontWeight: 400,
+                    }}
+                  >
+                    Weight {formatPercentage(dimension.weight)}
+                  </span>
+                </h3>
 
                 {dimension.description && (
                   <p style={{ color: "var(--aix-color-text-muted)" }}>
@@ -297,7 +309,105 @@ export default function PublishedIndexPage() {
                         <DetailField label="Directionality">
                           {formatDirectionality(indicator.directionality)}
                         </DetailField>
+                        <DetailField label="Indicator weight">
+                          {formatPercentage(indicator.weight)}
+                        </DetailField>
                       </dl>
+
+                      <div
+                        style={{
+                          marginTop: "var(--aix-space-md)",
+                          paddingTop: "var(--aix-space-md)",
+                          borderTop:
+                            "1px solid var(--aix-color-border)",
+                        }}
+                      >
+                        <strong>Data sources</strong>
+
+                        {indicator.sources.length === 0 ? (
+                          <p
+                            style={{
+                              color:
+                                "var(--aix-color-text-muted)",
+                              fontSize: "13px",
+                            }}
+                          >
+                            No source metadata is available.
+                          </p>
+                        ) : (
+                          <div
+                            style={{
+                              display: "grid",
+                              gap: "var(--aix-space-sm)",
+                              marginTop:
+                                "var(--aix-space-sm)",
+                            }}
+                          >
+                            {indicator.sources.map((source) => (
+                              <div
+                                key={source.id}
+                                style={{
+                                  padding:
+                                    "var(--aix-space-sm)",
+                                  background:
+                                    "var(--aix-color-background)",
+                                  borderRadius:
+                                    "var(--aix-radius-sm)",
+                                  fontSize: "13px",
+                                }}
+                              >
+                                <strong>{source.name}</strong>
+                                <div
+                                  style={{
+                                    marginTop: "4px",
+                                    color:
+                                      "var(--aix-color-text-muted)",
+                                  }}
+                                >
+                                  {source.original_filename ??
+                                    source.source_type}
+                                  {" · "}
+                                  {source.observation_count} observations
+                                  {" · "}
+                                  Periods:{" "}
+                                  {source.periods_covered.join(", ") ||
+                                    "—"}
+                                  {" · "}
+                                  Entities:{" "}
+                                  {source.entities_covered.join(", ") ||
+                                    "—"}
+                                </div>
+
+                                <div
+                                  style={{
+                                    marginTop: "4px",
+                                    color:
+                                      "var(--aix-color-text-muted)",
+                                  }}
+                                >
+                                  Imported{" "}
+                                  {formatDateTime(source.imported_at)}
+                                  {" · "}
+                                  Last updated{" "}
+                                  {formatDateTime(source.last_updated)}
+                                </div>
+
+                                {source.source_url && (
+                                  <div style={{ marginTop: "4px" }}>
+                                    <a
+                                      href={source.source_url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                    >
+                                      Source URL
+                                    </a>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </article>
                   ))}
                 </div>
@@ -420,6 +530,23 @@ function DetailField({
       <dd style={{ margin: "4px 0 0" }}>{children}</dd>
     </div>
   );
+}
+
+function formatPercentage(value: number): string {
+  return `${(value * 100).toFixed(2).replace(/\.00$/, "")}%`;
+}
+
+function formatDateTime(value: string): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }
 
 function formatScore(score: number): string {

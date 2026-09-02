@@ -118,6 +118,19 @@ export type PublishResponse = {
   message: string;
 };
 
+export type PublicDataSourceRecord = {
+  id: string;
+  name: string;
+  source_type: string;
+  source_url: string | null;
+  original_filename: string | null;
+  imported_at: string;
+  periods_covered: string[];
+  entities_covered: string[];
+  observation_count: number;
+  last_updated: string;
+};
+
 export type PublicIndicatorRecord = {
   id: string;
   name: string;
@@ -128,6 +141,8 @@ export type PublicIndicatorRecord = {
     | "lower_is_better"
     | null;
   order_position: number;
+  weight: number;
+  sources: PublicDataSourceRecord[];
 };
 
 export type PublicDimensionRecord = {
@@ -135,6 +150,7 @@ export type PublicDimensionRecord = {
   name: string;
   description: string | null;
   order_position: number;
+  weight: number;
   indicators: PublicIndicatorRecord[];
 };
 
@@ -658,6 +674,10 @@ export type DataSourceRecord = {
 export type DataSourceDetailRecord =
   DataSourceRecord & {
     data_points: DataPointRecord[];
+    observation_count: number;
+    periods_covered: string[];
+    entities_covered: string[];
+    last_updated: string;
   };
 
 export type CSVUploadResponse = {

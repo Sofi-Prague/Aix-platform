@@ -285,6 +285,37 @@ export function ResultsPanel({
       </header>
 
 
+      <section
+        style={{
+          padding: "var(--aix-space-md)",
+          border:
+            "1px solid var(--aix-color-border)",
+          borderRadius:
+            "var(--aix-radius-sm)",
+          background:
+            "var(--aix-color-surface)",
+        }}
+      >
+        <strong>Calculation trace</strong>
+        <p
+          style={{
+            margin:
+              "var(--aix-space-sm) 0 0",
+            color:
+              "var(--aix-color-text-muted)",
+            fontSize: "13px",
+          }}
+        >
+          Raw value → Normalized value →
+          Indicator weight → Indicator
+          contribution → Dimension score →
+          Dimension weight → Final score.
+          Expand any entity below to inspect
+          every step.
+        </p>
+      </section>
+
+
       {calculation.periods.length >
         1 && (
         <div
@@ -498,6 +529,9 @@ function EntityBreakdown({
           {formatScore(
             result.score,
           )}
+          {" · "}
+          Sum of weighted dimension
+          contributions
         </span>
       </div>
 
