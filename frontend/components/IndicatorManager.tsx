@@ -44,22 +44,6 @@ type Directionality =
   | "lower_is_better"
   | "";
 
-function focusEditor(fieldId: string): void {
-  window.requestAnimationFrame(() => {
-    window.requestAnimationFrame(() => {
-      const field =
-        document.getElementById(fieldId);
-
-      field?.scrollIntoView({
-        behavior: "smooth",
-        block: "center",
-      });
-
-      field?.focus();
-    });
-  });
-}
-
 export function IndicatorManager({
   selectedIndex,
   selectedDimension,
@@ -184,6 +168,25 @@ export function IndicatorManager({
     selectedDimension.id,
     methodologyVersion,
   ]);
+
+  useEffect(() => {
+  if (
+    mode === "create" ||
+    mode === "edit"
+  ) {
+    const field =
+      document.getElementById(
+        "indicator-name",
+      );
+
+    field?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+
+    field?.focus();
+  }
+}, [mode]);
 
   function resetForm(): void {
     setMode("closed");
