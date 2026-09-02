@@ -171,6 +171,7 @@ export type PublicIndexRecord = {
   slug: string;
   description: string | null;
   status: string;
+  updated_at: string;
   normalization_method: "min_max_0_1";
   weighting_method: WeightingMethod;
   periods: PublicPeriodRecord[];
