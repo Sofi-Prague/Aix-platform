@@ -360,8 +360,13 @@ def test_public_endpoint_returns_published_index(
         index_id=str(index.id),
     )
 
-    create_ready_indicator(
+    indicator = create_ready_indicator(
         dimension_id=str(dimension.id),
+    )
+
+    make_index_publishable(
+        index=index,
+        indicator=indicator,
     )
 
     db = SessionLocal()
@@ -393,6 +398,24 @@ def test_public_endpoint_returns_published_index(
     assert body["name"] == "Publishing Test Index"
     assert body["slug"] == slug
     assert body["status"] == "published"
+    assert body["normalization_method"] == "min_max_0_1"
+    assert body["weighting_method"] == "equal"
+    assert len(body["periods"]) == 1
+
+    period = body["periods"][0]
+    assert period["period"] == "2025"
+    assert period["results"] == [
+        {
+            "entity": "Entity B",
+            "rank": 1,
+            "score": 1.0,
+        },
+        {
+            "entity": "Entity A",
+            "rank": 2,
+            "score": 0.0,
+        },
+    ]
 
     assert len(body["dimensions"]) == 1
 

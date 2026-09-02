@@ -35,7 +35,7 @@ class IndexUpdate(BaseModel):
     )
     status: str | None = Field(
         default=None,
-        pattern=r"^(draft|published|archived)$",
+        pattern=r"^(draft|archived)$",
     )
 
 

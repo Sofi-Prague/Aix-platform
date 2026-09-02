@@ -390,23 +390,10 @@ def get_weights(
     )
 
 
-@router.get(
-    "/indexes/{index_slug}",
-    response_model=IndexCalculationResponse,
-)
-def calculate_index(
-    index_slug: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(
-        get_current_user
-    ),
-):
-    index = get_owned_index(
-        index_slug,
-        db,
-        current_user,
-    )
-
+def calculate_index_record(
+    index: Index,
+    db: Session,
+) -> IndexCalculationResponse:
     dimensions = (
         db.query(Dimension)
         .filter(
@@ -754,4 +741,27 @@ def calculate_index(
             weighting_method
         ),
         periods=periods,
+    )
+
+
+@router.get(
+    "/indexes/{index_slug}",
+    response_model=IndexCalculationResponse,
+)
+def calculate_index(
+    index_slug: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(
+        get_current_user
+    ),
+):
+    index = get_owned_index(
+        index_slug,
+        db,
+        current_user,
+    )
+
+    return calculate_index_record(
+        index,
+        db,
     )

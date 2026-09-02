@@ -255,7 +255,7 @@ def test_update_index(
         json={
             "name": "Updated Name",
             "description": "Updated description.",
-            "status": "published",
+            "status": "archived",
         },
     )
 
@@ -265,8 +265,43 @@ def test_update_index(
 
     assert body["name"] == "Updated Name"
     assert body["description"] == "Updated description."
-    assert body["status"] == "published"
+    assert body["status"] == "archived"
 
+
+
+def test_update_index_cannot_set_published_directly(
+    client: TestClient,
+    auth_headers: dict[str, str],
+):
+    slug = f"no-direct-publish-{uuid.uuid4()}"
+
+    create_response = client.post(
+        "/indexes",
+        headers=auth_headers,
+        json={
+            "name": "Checklist Protected Index",
+            "slug": slug,
+            "description": "Publication must use the publish endpoint.",
+        },
+    )
+
+    assert create_response.status_code == 201
+
+    response = client.patch(
+        f"/indexes/{slug}",
+        headers=auth_headers,
+        json={"status": "published"},
+    )
+
+    assert response.status_code == 422
+
+    get_response = client.get(
+        f"/indexes/{slug}",
+        headers=auth_headers,
+    )
+
+    assert get_response.status_code == 200
+    assert get_response.json()["status"] == "draft"
 
 def test_update_missing_index_returns_404(
     client: TestClient,

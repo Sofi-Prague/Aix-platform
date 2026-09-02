@@ -29,6 +29,7 @@ type IndexManagerProps = {
 };
 
 type EditorMode = "closed" | "create" | "edit";
+type EditableIndexStatus = "draft" | "archived";
 
 function makeSlug(value: string): string {
   return value
@@ -63,7 +64,7 @@ export function IndexManager({
     useState("");
 
   const [status, setStatus] =
-    useState<IndexRecord["status"]>("draft");
+    useState<EditableIndexStatus>("draft");
 
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -99,7 +100,11 @@ export function IndexManager({
     setDescription(
       index.description ?? "",
     );
-    setStatus(index.status);
+    setStatus(
+      index.status === "archived"
+        ? "archived"
+        : "draft",
+    );
     setError("");
     setMessage("");
     setMode("edit");
@@ -424,7 +429,7 @@ export function IndexManager({
                 onChange={(event) =>
                   setStatus(
                     event.target
-                      .value as IndexRecord["status"],
+                      .value as EditableIndexStatus,
                   )
                 }
                 style={{
@@ -446,14 +451,26 @@ export function IndexManager({
                   Draft
                 </option>
 
-                <option value="published">
-                  Published
-                </option>
-
                 <option value="archived">
                   Archived
                 </option>
               </select>
+
+              {editingIndex?.status === "published" && (
+                <p
+                  style={{
+                    margin: 0,
+                    color: "var(--aix-color-text-muted)",
+                    fontSize: "13px",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Published status can only be reached through the
+                  Publish checklist. Saving changes to a published
+                  index returns it to Draft for recalculation,
+                  validation, and republication.
+                </p>
+              )}
             </div>
           )}
 

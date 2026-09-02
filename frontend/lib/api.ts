@@ -49,7 +49,7 @@ export type UpdateIndexRequest = {
   name?: string;
   slug?: string;
   description?: string | null;
-  status?: "draft" | "published" | "archived";
+  status?: "draft" | "archived";
 };
 
 export type DimensionRecord = {
@@ -138,12 +138,26 @@ export type PublicDimensionRecord = {
   indicators: PublicIndicatorRecord[];
 };
 
+export type PublicResultRecord = {
+  entity: string;
+  rank: number;
+  score: number;
+};
+
+export type PublicPeriodRecord = {
+  period: string;
+  results: PublicResultRecord[];
+};
+
 export type PublicIndexRecord = {
   id: string;
   name: string;
   slug: string;
   description: string | null;
   status: string;
+  normalization_method: "min_max_0_1";
+  weighting_method: WeightingMethod;
+  periods: PublicPeriodRecord[];
   dimensions: PublicDimensionRecord[];
 };
 

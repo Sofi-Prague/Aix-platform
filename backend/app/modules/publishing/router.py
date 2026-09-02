@@ -40,11 +40,14 @@ from app.modules.identity.router import (
 )
 from app.modules.methodology_engine.calculation_router import (
     calculate_index,
+    calculate_index_record,
 )
 from app.modules.publishing.schemas import (
     PublicDimensionOut,
     PublicIndexOut,
     PublicIndicatorOut,
+    PublicPeriodOut,
+    PublicResultOut,
     PublishChecklistItem,
     PublishResponse,
     PublishValidationResponse,
@@ -1123,6 +1126,26 @@ def get_public_index(
             )
         )
 
+    calculation = calculate_index_record(
+        index,
+        db,
+    )
+
+    public_periods = [
+        PublicPeriodOut(
+            period=period.period,
+            results=[
+                PublicResultOut(
+                    entity=result.entity,
+                    rank=result.rank,
+                    score=result.score,
+                )
+                for result in period.results
+            ],
+        )
+        for period in calculation.periods
+    ]
+
     return PublicIndexOut(
         id=str(
             index.id
@@ -1133,6 +1156,11 @@ def get_public_index(
             index.description
         ),
         status=index.status,
+        normalization_method="min_max_0_1",
+        weighting_method=(
+            calculation.weighting_method
+        ),
+        periods=public_periods,
         dimensions=(
             public_dimensions
         ),

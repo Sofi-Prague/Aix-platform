@@ -43,10 +43,24 @@ class PublicDimensionOut(BaseModel):
     indicators: list[PublicIndicatorOut]
 
 
+class PublicResultOut(BaseModel):
+    entity: str
+    rank: int
+    score: float
+
+
+class PublicPeriodOut(BaseModel):
+    period: str
+    results: list[PublicResultOut]
+
+
 class PublicIndexOut(BaseModel):
     id: str
     name: str
     slug: str
     description: str | None = None
     status: str
+    normalization_method: str
+    weighting_method: str
+    periods: list[PublicPeriodOut]
     dimensions: list[PublicDimensionOut]

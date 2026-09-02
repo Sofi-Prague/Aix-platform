@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useParams } from "next/navigation";
 
 import {
@@ -13,10 +13,7 @@ export default function PublishedIndexPage() {
 
   const [index, setIndex] =
     useState<PublicIndexRecord | null>(null);
-
-  const [isLoading, setIsLoading] =
-    useState(true);
-
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -29,13 +26,10 @@ export default function PublishedIndexPage() {
       setError("");
 
       try {
-        const publishedIndex =
-          await getPublishedIndex(params.slug);
-
+        const publishedIndex = await getPublishedIndex(params.slug);
         setIndex(publishedIndex);
       } catch (caughtError) {
         setIndex(null);
-
         setError(
           caughtError instanceof Error
             ? caughtError.message
@@ -74,20 +68,15 @@ export default function PublishedIndexPage() {
         }}
       >
         <strong>AIX</strong>
-
         <h1>Published index not found</h1>
-
-        <p
-          style={{
-            color: "var(--aix-color-text-muted)",
-          }}
-        >
-          {error ||
-            "This index is not available publicly."}
+        <p style={{ color: "var(--aix-color-text-muted)" }}>
+          {error || "This index is not available publicly."}
         </p>
       </main>
     );
   }
+
+  const periods = [...index.periods].reverse();
 
   return (
     <main
@@ -98,10 +87,8 @@ export default function PublishedIndexPage() {
     >
       <header
         style={{
-          padding:
-            "var(--aix-space-md) var(--aix-space-xl)",
-          borderBottom:
-            "1px solid var(--aix-color-border)",
+          padding: "var(--aix-space-md) var(--aix-space-xl)",
+          borderBottom: "1px solid var(--aix-color-border)",
           background: "var(--aix-color-surface)",
         }}
       >
@@ -110,17 +97,12 @@ export default function PublishedIndexPage() {
 
       <article
         style={{
-          maxWidth: "960px",
+          maxWidth: "1040px",
           margin: "0 auto",
-          padding:
-            "var(--aix-space-xl) var(--aix-space-lg)",
+          padding: "var(--aix-space-xl) var(--aix-space-lg)",
         }}
       >
-        <header
-          style={{
-            marginBottom: "var(--aix-space-xl)",
-          }}
-        >
+        <header style={{ marginBottom: "var(--aix-space-xl)" }}>
           <p
             style={{
               marginBottom: "8px",
@@ -134,23 +116,17 @@ export default function PublishedIndexPage() {
             Published Index
           </p>
 
-          <h1
-            style={{
-              marginTop: 0,
-              fontSize: "36px",
-            }}
-          >
+          <h1 style={{ marginTop: 0, fontSize: "36px" }}>
             {index.name}
           </h1>
 
           {index.description && (
             <p
               style={{
-                maxWidth: "720px",
+                maxWidth: "760px",
                 fontSize: "18px",
                 lineHeight: 1.6,
-                color:
-                  "var(--aix-color-text-muted)",
+                color: "var(--aix-color-text-muted)",
               }}
             >
               {index.description}
@@ -158,36 +134,127 @@ export default function PublishedIndexPage() {
           )}
         </header>
 
-        <div
-          style={{
-            display: "grid",
-            gap: "var(--aix-space-xl)",
-          }}
-        >
-          {index.dimensions.map(
-            (dimension, dimensionIndex) => (
+        <section style={{ marginBottom: "var(--aix-space-xl)" }}>
+          <h2>Results</h2>
+
+          {periods.length === 0 ? (
+            <p style={{ color: "var(--aix-color-text-muted)" }}>
+              No calculated results are available.
+            </p>
+          ) : (
+            <div style={{ display: "grid", gap: "var(--aix-space-lg)" }}>
+              {periods.map((period, periodIndex) => (
+                <section
+                  key={period.period}
+                  style={{
+                    border: "1px solid var(--aix-color-border)",
+                    borderRadius: "var(--aix-radius-sm)",
+                    background: "var(--aix-color-surface)",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "var(--aix-space-md) var(--aix-space-lg)",
+                      borderBottom: "1px solid var(--aix-color-border)",
+                    }}
+                  >
+                    <strong>
+                      {periodIndex === 0 ? "Latest ranking" : "Ranking"}
+                    </strong>
+                    <span
+                      style={{
+                        marginLeft: "8px",
+                        color: "var(--aix-color-text-muted)",
+                      }}
+                    >
+                      Period: {period.period}
+                    </span>
+                  </div>
+
+                  <div style={{ overflowX: "auto" }}>
+                    <table
+                      style={{
+                        width: "100%",
+                        borderCollapse: "collapse",
+                        minWidth: "520px",
+                      }}
+                    >
+                      <thead>
+                        <tr>
+                          <TableHeader>Rank</TableHeader>
+                          <TableHeader>Entity / Country</TableHeader>
+                          <TableHeader align="right">Final score</TableHeader>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {period.results.map((result) => (
+                          <tr key={`${period.period}-${result.entity}`}>
+                            <TableCell>{result.rank}</TableCell>
+                            <TableCell>
+                              <strong>{result.entity}</strong>
+                            </TableCell>
+                            <TableCell align="right">
+                              {formatScore(result.score)}
+                            </TableCell>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section style={{ marginBottom: "var(--aix-space-xl)" }}>
+          <h2>Methodology summary</h2>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gap: "var(--aix-space-md)",
+            }}
+          >
+            <SummaryCard
+              label="Normalization"
+              value="Min-Max (0–1)"
+              detail="Higher is better: (x − min) / (max − min). Lower is better: (max − x) / (max − min)."
+            />
+            <SummaryCard
+              label="Weighting"
+              value={formatWeighting(index.weighting_method)}
+              detail={
+                index.weighting_method === "equal"
+                  ? "Dimensions and indicators are equally weighted within their respective levels."
+                  : "Custom dimension and indicator weights are used for the published calculation."
+              }
+            />
+          </div>
+        </section>
+
+        <section>
+          <h2>Dimensions & indicators</h2>
+
+          <div style={{ display: "grid", gap: "var(--aix-space-xl)" }}>
+            {index.dimensions.map((dimension, dimensionIndex) => (
               <section
                 key={dimension.id}
                 style={{
                   paddingTop:
-                    dimensionIndex === 0
-                      ? 0
-                      : "var(--aix-space-xl)",
+                    dimensionIndex === 0 ? 0 : "var(--aix-space-xl)",
                   borderTop:
                     dimensionIndex === 0
                       ? undefined
                       : "1px solid var(--aix-color-border)",
                 }}
               >
-                <h2>{dimension.name}</h2>
+                <h3 style={{ fontSize: "24px" }}>{dimension.name}</h3>
 
                 {dimension.description && (
-                  <p
-                    style={{
-                      color:
-                        "var(--aix-color-text-muted)",
-                    }}
-                  >
+                  <p style={{ color: "var(--aix-color-text-muted)" }}>
                     {dimension.description}
                   </p>
                 )}
@@ -196,113 +263,175 @@ export default function PublishedIndexPage() {
                   style={{
                     display: "grid",
                     gap: "var(--aix-space-md)",
-                    marginTop:
-                      "var(--aix-space-lg)",
+                    marginTop: "var(--aix-space-lg)",
                   }}
                 >
-                  {dimension.indicators.map(
-                    (indicator) => (
-                      <article
-                        key={indicator.id}
+                  {dimension.indicators.map((indicator) => (
+                    <article
+                      key={indicator.id}
+                      style={{
+                        padding: "var(--aix-space-lg)",
+                        border: "1px solid var(--aix-color-border)",
+                        borderRadius: "var(--aix-radius-sm)",
+                        background: "var(--aix-color-surface)",
+                      }}
+                    >
+                      <h4 style={{ marginTop: 0, fontSize: "18px" }}>
+                        {indicator.name}
+                      </h4>
+
+                      {indicator.description && <p>{indicator.description}</p>}
+
+                      <dl
                         style={{
-                          padding:
-                            "var(--aix-space-lg)",
-                          border:
-                            "1px solid var(--aix-color-border)",
-                          borderRadius:
-                            "var(--aix-radius-sm)",
-                          background:
-                            "var(--aix-color-surface)",
+                          display: "grid",
+                          gridTemplateColumns:
+                            "repeat(auto-fit, minmax(180px, 1fr))",
+                          gap: "var(--aix-space-md)",
+                          marginBottom: 0,
                         }}
                       >
-                        <h3
-                          style={{
-                            marginTop: 0,
-                          }}
-                        >
-                          {indicator.name}
-                        </h3>
-
-                        {indicator.description && (
-                          <p>
-                            {indicator.description}
-                          </p>
-                        )}
-
-                        <dl
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns:
-                              "repeat(auto-fit, minmax(180px, 1fr))",
-                            gap:
-                              "var(--aix-space-md)",
-                            marginBottom: 0,
-                          }}
-                        >
-                          <div>
-                            <dt
-                              style={{
-                                color:
-                                  "var(--aix-color-text-muted)",
-                                fontSize: "12px",
-                                textTransform:
-                                  "uppercase",
-                              }}
-                            >
-                              Unit
-                            </dt>
-
-                            <dd
-                              style={{
-                                margin: "4px 0 0",
-                              }}
-                            >
-                              {indicator.unit ?? "—"}
-                            </dd>
-                          </div>
-
-                          <div>
-                            <dt
-                              style={{
-                                color:
-                                  "var(--aix-color-text-muted)",
-                                fontSize: "12px",
-                                textTransform:
-                                  "uppercase",
-                              }}
-                            >
-                              Directionality
-                            </dt>
-
-                            <dd
-                              style={{
-                                margin: "4px 0 0",
-                              }}
-                            >
-                              {formatDirectionality(
-                                indicator.directionality,
-                              )}
-                            </dd>
-                          </div>
-                        </dl>
-                      </article>
-                    ),
-                  )}
+                        <DetailField label="Unit">
+                          {indicator.unit ?? "—"}
+                        </DetailField>
+                        <DetailField label="Directionality">
+                          {formatDirectionality(indicator.directionality)}
+                        </DetailField>
+                      </dl>
+                    </article>
+                  ))}
                 </div>
               </section>
-            ),
-          )}
-        </div>
+            ))}
+          </div>
+        </section>
       </article>
     </main>
   );
 }
 
+function TableHeader({
+  children,
+  align = "left",
+}: {
+  children: ReactNode;
+  align?: "left" | "right";
+}) {
+  return (
+    <th
+      style={{
+        padding: "12px 16px",
+        textAlign: align,
+        fontSize: "12px",
+        textTransform: "uppercase",
+        color: "var(--aix-color-text-muted)",
+        borderBottom: "1px solid var(--aix-color-border)",
+      }}
+    >
+      {children}
+    </th>
+  );
+}
+
+function TableCell({
+  children,
+  align = "left",
+}: {
+  children: ReactNode;
+  align?: "left" | "right";
+}) {
+  return (
+    <td
+      style={{
+        padding: "14px 16px",
+        textAlign: align,
+        borderBottom: "1px solid var(--aix-color-border)",
+      }}
+    >
+      {children}
+    </td>
+  );
+}
+
+function SummaryCard({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <article
+      style={{
+        padding: "var(--aix-space-lg)",
+        border: "1px solid var(--aix-color-border)",
+        borderRadius: "var(--aix-radius-sm)",
+        background: "var(--aix-color-surface)",
+      }}
+    >
+      <p
+        style={{
+          margin: 0,
+          color: "var(--aix-color-text-muted)",
+          fontSize: "12px",
+          textTransform: "uppercase",
+          fontWeight: 700,
+        }}
+      >
+        {label}
+      </p>
+      <strong style={{ display: "block", marginTop: "6px" }}>
+        {value}
+      </strong>
+      <p
+        style={{
+          margin: "8px 0 0",
+          color: "var(--aix-color-text-muted)",
+          lineHeight: 1.5,
+          fontSize: "14px",
+        }}
+      >
+        {detail}
+      </p>
+    </article>
+  );
+}
+
+function DetailField({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <div>
+      <dt
+        style={{
+          color: "var(--aix-color-text-muted)",
+          fontSize: "12px",
+          textTransform: "uppercase",
+        }}
+      >
+        {label}
+      </dt>
+      <dd style={{ margin: "4px 0 0" }}>{children}</dd>
+    </div>
+  );
+}
+
+function formatScore(score: number): string {
+  return score.toFixed(4);
+}
+
+function formatWeighting(method: "equal" | "custom"): string {
+  return method === "equal" ? "Equal weighting" : "Custom weighting";
+}
+
 function formatDirectionality(
-  directionality:
-    | "higher_is_better"
-    | "lower_is_better"
-    | null,
+  directionality: "higher_is_better" | "lower_is_better" | null,
 ): string {
   if (directionality === "higher_is_better") {
     return "Higher is better";
