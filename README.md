@@ -35,7 +35,7 @@ The founding AIX workflow is operational end to end. An authenticated author can
 13. Review public rankings, final scores, normalization method, weights, source provenance, and publication timestamp.
 14. Automatically return a published index to Draft when methodology, data, weighting, or core metadata changes, requiring recalculation, validation, and republication.
 
-The core application has completed regression validation with the current backend test suite passing, a clean frontend ESLint run, and a successful optimized Next.js production build. The closure changes add publication-integrity, provenance, public-results, transparency, and UX safeguards beyond the original 83-test baseline.
+The core application has completed regression validation with the current backend test suite passing, a clean frontend ESLint run, and a successful optimized Next.js production build. On 2 September 2026, the live deployment also passed a controlled end-to-end production acceptance test covering provenance, both normalization directions, equal weighting, calculation trace, AI ordering, the 14-check publication workflow, unauthenticated public results, and automatic Published-to-Draft invalidation with immediate UI status refresh. The exact final backend pass count should be taken from the stored test output rather than the earlier 83-test baseline.
 
 ## Architecture
 
@@ -254,7 +254,7 @@ cd backend
 python -m pytest -v
 ```
 
-Run the full current suite and record the exact pass count in `docs/PRODUCTION_VERIFICATION_CHECKLIST.md` before final handover.
+Run the full current suite and retain the exact command output with the final testing evidence. Do not rely on the historical 83-test count after later closure changes.
 
 To run everything except AI-provider tests:
 
@@ -313,7 +313,7 @@ Publish Index
 Open Public Read-Only Index
 ```
 
-This workflow has been exercised using complete sample indexes to verify that the platform works from methodology creation through calculation and publication.
+This workflow was re-verified in production on 2 September 2026 using a controlled index whose expected scores were known in advance: Gamma 1.000, Beta 0.500, Alpha 0.000. The run also verified source provenance, higher- and lower-is-better normalization, equal weighting, the expandable calculation trace, live AI suggestions and ordering, validation/publication, logged-out public access, and publication invalidation after subsequent changes.
 
 ## Production Deployment
 
