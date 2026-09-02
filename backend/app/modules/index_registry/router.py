@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.models import Index, User
+from app.core.publication_state import mark_index_draft_if_published
 from app.modules.identity.router import get_current_user
 from app.modules.index_registry.schemas import (
     IndexCreate,
@@ -140,6 +141,15 @@ def update_index(
 
     updates = payload.model_dump(exclude_unset=True)
 
+    if updates.get("status") == "published":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Indexes can only be published through "
+                "the publication validation workflow."
+            ),
+        )
+
     if "slug" in updates and updates["slug"] != index.slug:
         duplicate = (
             db.query(Index)
@@ -165,6 +175,18 @@ def update_index(
             value = value.strip()
 
         setattr(index, field, value)
+
+    metadata_changed = any(
+        field in updates
+        for field in ("name", "slug", "description")
+    )
+
+    if (
+        metadata_changed
+        and index.status == "published"
+        and updates.get("status") != "archived"
+    ):
+        mark_index_draft_if_published(index)
 
     try:
         db.commit()

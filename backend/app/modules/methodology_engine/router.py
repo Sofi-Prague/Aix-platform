@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.core.models import Dimension, Index, Indicator, User
+from app.core.publication_state import mark_index_draft_if_published
 from app.modules.identity.router import get_current_user
 from app.modules.methodology_engine.schemas import (
     DimensionCreate,
@@ -181,6 +182,7 @@ def create_dimension(
     )
 
     db.add(dimension)
+    mark_index_draft_if_published(index)
     db.commit()
     db.refresh(dimension)
 
@@ -245,6 +247,7 @@ def update_dimension(
 
         setattr(dimension, field, value)
 
+    mark_index_draft_if_published(index)
     db.commit()
     db.refresh(dimension)
 
@@ -281,6 +284,7 @@ def delete_dimension(
     )
 
     db.delete(dimension)
+    mark_index_draft_if_published(index)
     db.commit()
 
     return None
@@ -363,6 +367,7 @@ def create_indicator(
     )
 
     db.add(indicator)
+    mark_index_draft_if_published(index)
     db.commit()
     db.refresh(indicator)
 
@@ -441,6 +446,7 @@ def update_indicator(
 
         setattr(indicator, field, value)
 
+    mark_index_draft_if_published(index)
     db.commit()
     db.refresh(indicator)
 
@@ -479,6 +485,7 @@ def delete_indicator(
     )
 
     db.delete(indicator)
+    mark_index_draft_if_published(index)
     db.commit()
 
     return None

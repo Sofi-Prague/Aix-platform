@@ -17,6 +17,7 @@ from app.core.models import (
     User,
     WeightingConfig,
 )
+from app.core.publication_state import mark_index_draft_if_published
 from app.modules.identity.router import (
     get_current_user,
 )
@@ -275,6 +276,7 @@ def save_weighting(
         weighting.method = payload.method
         weighting.config = config
 
+    mark_index_draft_if_published(index)
     db.commit()
     db.refresh(weighting)
 

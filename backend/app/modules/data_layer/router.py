@@ -28,6 +28,7 @@ from app.core.models import (
     Indicator,
     User,
 )
+from app.core.publication_state import mark_index_draft_if_published
 from app.modules.data_layer.schemas import (
     CSVUploadResponse,
     DataPointOut,
@@ -360,12 +361,22 @@ async def upload_csv(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    indicator = get_indicator_for_user(
+    index = get_owned_index(
         index_slug,
-        dimension_id,
-        indicator_id,
         db,
         current_user,
+    )
+
+    dimension = get_owned_dimension(
+        index,
+        dimension_id,
+        db,
+    )
+
+    indicator = get_owned_indicator(
+        dimension,
+        indicator_id,
+        db,
     )
 
     clean_name = name.strip()
@@ -416,6 +427,7 @@ async def upload_csv(
         ]
 
         db.add_all(points)
+        mark_index_draft_if_published(index)
         db.commit()
         db.refresh(source)
 
@@ -545,12 +557,22 @@ def delete_data_source(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    indicator = get_indicator_for_user(
+    index = get_owned_index(
         index_slug,
-        dimension_id,
-        indicator_id,
         db,
         current_user,
+    )
+
+    dimension = get_owned_dimension(
+        index,
+        dimension_id,
+        db,
+    )
+
+    indicator = get_owned_indicator(
+        dimension,
+        indicator_id,
+        db,
     )
 
     source = get_owned_data_source(
@@ -560,6 +582,7 @@ def delete_data_source(
     )
 
     db.delete(source)
+    mark_index_draft_if_published(index)
     db.commit()
 
     return None
