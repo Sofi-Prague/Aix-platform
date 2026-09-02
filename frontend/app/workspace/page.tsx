@@ -110,11 +110,36 @@ export default function WorkspacePage() {
     void loadWorkspace();
   }, [router]);
 
-  function refreshMethodology(): void {
-    setMethodologyVersion(
-      (current) => current + 1,
+  async function refreshMethodology(): Promise<void> {
+  setMethodologyVersion(
+    (current) => current + 1,
+  );
+
+  try {
+    const updatedIndexes =
+      await getIndexes();
+
+    setIndexes(updatedIndexes);
+
+    if (selectedIndex) {
+      const updatedSelectedIndex =
+        updatedIndexes.find(
+          (index) =>
+            index.id === selectedIndex.id,
+        ) ?? null;
+
+      setSelectedIndex(
+        updatedSelectedIndex,
+      );
+    }
+  } catch (caughtError) {
+    setError(
+      caughtError instanceof Error
+        ? caughtError.message
+        : "Unable to refresh the index state.",
     );
   }
+}
 
   function handleLogout(): void {
     removeAccessToken();
@@ -317,8 +342,8 @@ export default function WorkspacePage() {
         onSelectIndex={
           handleSelectIndex
         }
-        onMethodologyChange={
-          refreshMethodology
+        onMethodologyChange={() =>
+          void refreshMethodology()
         }
       />
 
@@ -341,8 +366,8 @@ export default function WorkspacePage() {
         onSelectIndicator={
           setSelectedIndicator
         }
-        onMethodologyChange={
-          refreshMethodology
+        onMethodologyChange={() =>
+          void refreshMethodology()
         }
         onIndexPublished={() =>
           void handleIndexPublished()
