@@ -28,10 +28,18 @@ type IndexManagerProps = {
   onMethodologyChange: () => void;
 };
 
-type EditorMode = "closed" | "create" | "edit";
-type EditableIndexStatus = "draft" | "archived";
+type EditorMode =
+  | "closed"
+  | "create"
+  | "edit";
 
-function makeSlug(value: string): string {
+type EditableIndexStatus =
+  | "draft"
+  | "archived";
+
+function makeSlug(
+  value: string,
+): string {
   return value
     .toLowerCase()
     .trim()
@@ -40,12 +48,15 @@ function makeSlug(value: string): string {
     .replace(/-+/g, "-");
 }
 
-
-function focusEditor(fieldId: string): void {
+function focusEditor(
+  fieldId: string,
+): void {
   window.requestAnimationFrame(() => {
     window.requestAnimationFrame(() => {
       const field =
-        document.getElementById(fieldId);
+        document.getElementById(
+          fieldId,
+        );
 
       field?.scrollIntoView({
         behavior: "smooth",
@@ -55,6 +66,40 @@ function focusEditor(fieldId: string): void {
       field?.focus();
     });
   });
+}
+
+function getStatusLabel(
+  status: string,
+): string {
+  switch (status) {
+    case "published":
+      return "Published";
+
+    case "archived":
+      return "Archived";
+
+    default:
+      return "Draft";
+  }
+}
+
+function getStatusType(
+  status: string,
+):
+  | "success"
+  | "warning"
+  | "danger"
+  | "info" {
+  switch (status) {
+    case "published":
+      return "success";
+
+    case "archived":
+      return "danger";
+
+    default:
+      return "warning";
+  }
 }
 
 export function IndexManager({
@@ -68,29 +113,60 @@ export function IndexManager({
     useState<EditorMode>("closed");
 
   const [
-    isIndexListOpen,
-    setIsIndexListOpen,
-  ] = useState(false);
+    editingIndex,
+    setEditingIndex,
+  ] =
+    useState<IndexRecord | null>(
+      null,
+    );
 
-  const [editingIndex, setEditingIndex] =
-    useState<IndexRecord | null>(null);
-
-  const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
-  const [description, setDescription] =
+  const [name, setName] =
     useState("");
 
-  const [status, setStatus] =
-    useState<EditableIndexStatus>("draft");
+  const [slug, setSlug] =
+    useState("");
 
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const [
+    description,
+    setDescription,
+  ] = useState("");
+
+  const [status, setStatus] =
+    useState<EditableIndexStatus>(
+      "draft",
+    );
+
+  const [error, setError] =
+    useState("");
+
+  const [message, setMessage] =
+    useState("");
 
   const [isSaving, setIsSaving] =
     useState(false);
 
-  const [deletingSlug, setDeletingSlug] =
-    useState<string | null>(null);
+  const [
+    deletingSlug,
+    setDeletingSlug,
+  ] = useState<string | null>(null);
+
+  const publishedCount =
+    indexes.filter(
+      (index) =>
+        index.status === "published",
+    ).length;
+
+  const draftCount =
+    indexes.filter(
+      (index) =>
+        index.status === "draft",
+    ).length;
+
+  const archivedCount =
+    indexes.filter(
+      (index) =>
+        index.status === "archived",
+    ).length;
 
   function resetForm(): void {
     setMode("closed");
@@ -106,6 +182,7 @@ export function IndexManager({
     resetForm();
     setMessage("");
     setMode("create");
+
     focusEditor("index-name");
   }
 
@@ -115,17 +192,21 @@ export function IndexManager({
     setEditingIndex(index);
     setName(index.name);
     setSlug(index.slug);
+
     setDescription(
       index.description ?? "",
     );
+
     setStatus(
       index.status === "archived"
         ? "archived"
         : "draft",
     );
+
     setError("");
     setMessage("");
     setMode("edit");
+
     focusEditor("index-name");
   }
 
@@ -150,12 +231,13 @@ export function IndexManager({
 
     try {
       if (mode === "create") {
-        const created = await createIndex({
-          name,
-          slug,
-          description:
-            description || null,
-        });
+        const created =
+          await createIndex({
+            name,
+            slug,
+            description:
+              description || null,
+          });
 
         onIndexesChange([
           created,
@@ -163,8 +245,6 @@ export function IndexManager({
         ]);
 
         onSelectIndex(created);
-        setIsIndexListOpen(false);
-
         onMethodologyChange();
 
         setMessage(
@@ -225,9 +305,10 @@ export function IndexManager({
   async function handleDelete(
     index: IndexRecord,
   ): Promise<void> {
-    const confirmed = window.confirm(
-      `Delete "${index.name}"? This action cannot currently be undone.`,
-    );
+    const confirmed =
+      window.confirm(
+        `Delete "${index.name}"? This action cannot currently be undone.`,
+      );
 
     if (!confirmed) {
       return;
@@ -238,7 +319,9 @@ export function IndexManager({
     setDeletingSlug(index.slug);
 
     try {
-      await deleteIndex(index.slug);
+      await deleteIndex(
+        index.slug,
+      );
 
       onIndexesChange(
         indexes.filter(
@@ -248,14 +331,15 @@ export function IndexManager({
       );
 
       if (
-        selectedIndex?.id === index.id
+        selectedIndex?.id ===
+        index.id
       ) {
         onSelectIndex(null);
-        setIsIndexListOpen(true);
       }
 
       if (
-        editingIndex?.id === index.id
+        editingIndex?.id ===
+        index.id
       ) {
         resetForm();
       }
@@ -278,237 +362,251 @@ export function IndexManager({
 
   return (
     <section
-      aria-labelledby="index-manager-heading"
-      style={{
-        padding:
-          "var(--aix-space-lg)",
-        borderBottom:
-          "1px solid var(--aix-color-border)",
-      }}
+      id="indexes"
+      className="index-dashboard"
+      aria-labelledby="indexes-heading"
     >
-      <div
-        style={{
-          display: "flex",
-          justifyContent:
-            "space-between",
-          alignItems: "center",
-          gap:
-            "var(--aix-space-md)",
-          marginBottom:
-            "var(--aix-space-md)",
-        }}
-      >
-        <h1
-          id="index-manager-heading"
-          style={{
-            margin: 0,
-            fontSize: "20px",
-          }}
-        >
-          Your indexes
-        </h1>
+      <div className="index-dashboard-stats">
+        <article className="index-stat-card">
+          <span className="index-stat-value">
+            {indexes.length}
+          </span>
+
+          <span className="index-stat-label">
+            Total indexes
+          </span>
+
+          <span className="index-stat-detail">
+            Research projects in your
+            workspace
+          </span>
+        </article>
+
+        <article className="index-stat-card">
+          <span className="index-stat-value">
+            {publishedCount}
+          </span>
+
+          <span className="index-stat-label">
+            Published
+          </span>
+
+          <span className="index-stat-detail">
+            Available through public
+            results
+          </span>
+        </article>
+
+        <article className="index-stat-card">
+          <span className="index-stat-value">
+            {draftCount}
+          </span>
+
+          <span className="index-stat-label">
+            Draft
+          </span>
+
+          <span className="index-stat-detail">
+            Currently in development
+          </span>
+        </article>
+
+        {archivedCount > 0 && (
+          <article className="index-stat-card">
+            <span className="index-stat-value">
+              {archivedCount}
+            </span>
+
+            <span className="index-stat-label">
+              Archived
+            </span>
+
+            <span className="index-stat-detail">
+              Retained historical
+              projects
+            </span>
+          </article>
+        )}
+      </div>
+
+      <div className="index-dashboard-heading">
+        <div>
+          <p className="aix-section-label">
+            Research portfolio
+          </p>
+
+          <h2
+            id="indexes-heading"
+            className="index-dashboard-title"
+          >
+            My Indexes
+          </h2>
+
+          <p className="index-dashboard-description">
+            Create, manage and open
+            your research indices.
+          </p>
+        </div>
 
         <Button
           type="button"
-          onClick={() => {
-            setIsIndexListOpen(true);
-            beginCreate();
-          }}
+          onClick={beginCreate}
         >
-          New index
+          + New index
         </Button>
       </div>
 
       {message && (
-        <div
-          style={{
-            marginBottom:
-              "var(--aix-space-md)",
-          }}
-        >
-          <StatusMessage
-            type="success"
-            title={message}
-          />
-        </div>
+        <StatusMessage
+          type="success"
+          title={message}
+        />
       )}
 
       {error && (
-        <div
-          style={{
-            marginBottom:
-              "var(--aix-space-md)",
-          }}
-        >
-          <StatusMessage
-            type="error"
-            title="Index operation failed"
-            message={error}
-          />
-        </div>
+        <StatusMessage
+          type="error"
+          title="Index operation failed"
+          message={error}
+        />
       )}
 
       {mode !== "closed" && (
         <form
+          className="index-editor"
           onSubmit={handleSubmit}
-          style={{
-            display: "grid",
-            gap:
-              "var(--aix-space-md)",
-            maxWidth: "620px",
-            marginBlock:
-              "var(--aix-space-lg)",
-            padding:
-              "var(--aix-space-lg)",
-            border:
-              "2px solid var(--aix-color-primary)",
-            borderRadius:
-              "var(--aix-radius-sm)",
-            background:
-              "var(--aix-color-surface)",
-          }}
         >
-          <h2
-            style={{
-              margin: 0,
-            }}
-          >
-            {mode === "create"
-              ? "Create index"
-              : "Edit index"}
-          </h2>
+          <div className="index-editor-header">
+            <div>
+              <p className="aix-section-label">
+                {mode === "create"
+                  ? "New research project"
+                  : "Index settings"}
+              </p>
 
-          <Input
-            id="index-name"
-            name="index-name"
-            label="Name"
-            required
-            value={name}
-            onChange={(event) =>
-              handleNameChange(
-                event.target.value,
-              )
-            }
-          />
+              <h3>
+                {mode === "create"
+                  ? "Create index"
+                  : `Edit ${editingIndex?.name ?? "index"}`}
+              </h3>
+            </div>
 
-          <Input
-            id="index-slug"
-            name="index-slug"
-            label="Slug"
-            required
-            pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-            value={slug}
-            onChange={(event) =>
-              setSlug(
-                event.target.value,
-              )
-            }
-          />
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={resetForm}
+              aria-label="Close index editor"
+            >
+              Close
+            </Button>
+          </div>
 
-          <div
-            style={{
-              display: "grid",
-              gap:
-                "var(--aix-space-sm)",
-            }}
-          >
-            <label htmlFor="index-description">
-              Description
-            </label>
-
-            <textarea
-              id="index-description"
-              value={description}
+          <div className="index-editor-grid">
+            <Input
+              id="index-name"
+              name="index-name"
+              label="Index name"
+              hint="Use the full research or publication title."
+              required
+              value={name}
               onChange={(event) =>
-                setDescription(
+                handleNameChange(
                   event.target.value,
                 )
               }
-              rows={4}
-              style={{
-                width: "100%",
-                padding: "10px 12px",
-                border:
-                  "1px solid var(--aix-color-border)",
-                borderRadius:
-                  "var(--aix-radius-sm)",
-                font: "inherit",
-                resize: "vertical",
-              }}
             />
-          </div>
 
-          {mode === "edit" && (
-            <div
-              style={{
-                display: "grid",
-                gap:
-                  "var(--aix-space-sm)",
-              }}
-            >
-              <label htmlFor="index-status">
-                Status
+            <Input
+              id="index-slug"
+              name="index-slug"
+              label="URL slug"
+              hint="Used in the public index URL."
+              required
+              pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+              value={slug}
+              onChange={(event) =>
+                setSlug(
+                  event.target.value,
+                )
+              }
+            />
+
+            <div className="aix-field index-editor-description">
+              <label
+                htmlFor="index-description"
+                className="aix-label"
+              >
+                Description
               </label>
 
-              <select
-                id="index-status"
-                value={status}
+              <textarea
+                id="index-description"
+                className="aix-textarea"
+                value={description}
                 onChange={(event) =>
-                  setStatus(
-                    event.target
-                      .value as EditableIndexStatus,
+                  setDescription(
+                    event.target.value,
                   )
                 }
-                style={{
-                  minHeight: "42px",
-                  padding:
-                    "10px 12px",
-                  border:
-                    "1px solid var(--aix-color-border)",
-                  borderRadius:
-                    "var(--aix-radius-sm)",
-                  background:
-                    "var(--aix-color-surface)",
-                  color:
-                    "var(--aix-color-text)",
-                  font: "inherit",
-                }}
-              >
-                <option value="draft">
-                  Draft
-                </option>
+                rows={4}
+                placeholder="Describe the purpose and scope of this index."
+              />
 
-                <option value="archived">
-                  Archived
-                </option>
-              </select>
-
-              {editingIndex?.status === "published" && (
-                <p
-                  style={{
-                    margin: 0,
-                    color: "var(--aix-color-text-muted)",
-                    fontSize: "13px",
-                    lineHeight: 1.5,
-                  }}
-                >
-                  Published status can only be reached through the
-                  Publish checklist. Saving changes to a published
-                  index returns it to Draft for recalculation,
-                  validation, and republication.
-                </p>
-              )}
+              <p className="aix-field-hint">
+                Briefly explain what the
+                index measures and why it
+                matters.
+              </p>
             </div>
-          )}
 
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap:
-                "var(--aix-space-sm)",
-            }}
-          >
+            {mode === "edit" && (
+              <div className="aix-field">
+                <label
+                  htmlFor="index-status"
+                  className="aix-label"
+                >
+                  Status
+                </label>
+
+                <select
+                  id="index-status"
+                  className="aix-select"
+                  value={status}
+                  onChange={(event) =>
+                    setStatus(
+                      event.target
+                        .value as EditableIndexStatus,
+                    )
+                  }
+                >
+                  <option value="draft">
+                    Draft
+                  </option>
+
+                  <option value="archived">
+                    Archived
+                  </option>
+                </select>
+
+                {editingIndex?.status ===
+                  "published" && (
+                  <p className="aix-field-hint">
+                    Published status is
+                    reached through the
+                    Publish checklist.
+                    Saving methodology
+                    changes returns the
+                    index to Draft for
+                    recalculation,
+                    validation and
+                    republication.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="index-editor-actions">
             <Button
               type="submit"
               isLoading={isSaving}
@@ -529,199 +627,141 @@ export function IndexManager({
         </form>
       )}
 
-      {selectedIndex && !isIndexListOpen ? (
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "var(--aix-space-md)",
-            padding: "var(--aix-space-md)",
-            border:
-              "1px solid var(--aix-color-border)",
-            borderRadius:
-              "var(--aix-radius-sm)",
-            background:
-              "var(--aix-color-surface)",
-          }}
-        >
-          <div>
-            <strong>
-              {selectedIndex.name}
-            </strong>
-
-            <p
-              style={{
-                margin: "4px 0 0",
-                color:
-                  "var(--aix-color-text-muted)",
-              }}
-            >
-              {selectedIndex.slug} ·{" "}
-              {selectedIndex.status}
-            </p>
-          </div>
-
+      {indexes.length === 0 ? (
+        <div className="index-empty-state">
           <div
-            style={{
-              display: "flex",
-              gap: "var(--aix-space-sm)",
-              flexWrap: "wrap",
-            }}
+            className="index-empty-icon"
+            aria-hidden="true"
           >
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() =>
-                setIsIndexListOpen(true)
-              }
-            >
-              Change index
-            </Button>
-
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() =>
-                beginEdit(selectedIndex)
-              }
-            >
-              Edit
-            </Button>
+            +
           </div>
+
+          <h3>
+            Create your first index
+          </h3>
+
+          <p>
+            Start a research project by
+            defining an index, its
+            dimensions and indicators.
+          </p>
+
+          <Button
+            type="button"
+            onClick={beginCreate}
+          >
+            Create new index
+          </Button>
         </div>
-      ) : indexes.length === 0 ? (
-        <StatusMessage
-          type="empty"
-          title="No indexes yet"
-          message="Create the first index for this tenant."
-        />
       ) : (
-        <ul
-          style={{
-            display: "grid",
-            gap: "var(--aix-space-sm)",
-            padding: 0,
-            margin: 0,
-            listStyle: "none",
-          }}
-        >
+        <div className="index-card-grid">
           {indexes.map((index) => {
             const isSelected =
-              selectedIndex?.id === index.id;
+              selectedIndex?.id ===
+              index.id;
 
             return (
-              <li
+              <article
                 key={index.id}
-                style={{
-                  display: "flex",
-                  justifyContent:
-                    "space-between",
-                  alignItems: "center",
-                  flexWrap: "wrap",
-                  gap:
-                    "var(--aix-space-md)",
-                  padding:
-                    "var(--aix-space-md)",
-                  border: isSelected
-                    ? "2px solid var(--aix-color-primary)"
-                    : "1px solid var(--aix-color-border)",
-                  borderRadius:
-                    "var(--aix-radius-sm)",
-                  background:
-                    "var(--aix-color-surface)",
-                }}
+                className="index-project-card"
+                data-selected={
+                  isSelected
+                }
               >
-                <div>
-                  <strong>
-                    {index.name}
-                  </strong>
-
-                  <p
-                    style={{
-                      margin: "4px 0 0",
-                      color:
-                        "var(--aix-color-text-muted)",
-                    }}
-                  >
-                    {index.slug} ·{" "}
-                    {index.status}
-                  </p>
-
-                  {index.description && (
-                    <p
-                      style={{
-                        margin:
-                          "var(--aix-space-sm) 0 0",
-                        color:
-                          "var(--aix-color-text-muted)",
-                        maxWidth: "600px",
-                      }}
+                <div className="index-project-card-header">
+                  <div>
+                    <span
+                      className="aix-badge"
+                      data-status={getStatusType(
+                        index.status,
+                      )}
                     >
-                      {index.description}
-                    </p>
+                      {getStatusLabel(
+                        index.status,
+                      )}
+                    </span>
+                  </div>
+
+                  {isSelected && (
+                    <span className="index-selected-label">
+                      Current
+                    </span>
                   )}
                 </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap:
-                      "var(--aix-space-sm)",
-                  }}
-                >
+                <div className="index-project-card-body">
+                  <h3>
+                    {index.name}
+                  </h3>
+
+                  <p className="index-project-description">
+                    {index.description ||
+                      "No description has been added to this index yet."}
+                  </p>
+                </div>
+
+                <div className="index-project-meta">
+                  <span>
+                    Identifier
+                  </span>
+
+                  <code>
+                    {index.slug}
+                  </code>
+                </div>
+
+                <div className="index-project-actions">
+                  <div className="index-project-secondary-actions">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() =>
+                        beginEdit(index)
+                      }
+                    >
+                      Edit
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={
+                        deletingSlug ===
+                        index.slug
+                      }
+                      onClick={() =>
+                        void handleDelete(
+                          index,
+                        )
+                      }
+                    >
+                      {deletingSlug ===
+                      index.slug
+                        ? "Deleting…"
+                        : "Delete"}
+                    </Button>
+                  </div>
+
                   <Button
                     type="button"
                     variant={
                       isSelected
-                        ? "primary"
-                        : "secondary"
+                        ? "secondary"
+                        : "primary"
                     }
-                    onClick={() => {
-                      onSelectIndex(index);
-                      setIsIndexListOpen(
-                        false,
-                      );
-                    }}
+                    onClick={() =>
+                      onSelectIndex(index)
+                    }
                   >
                     {isSelected
-                      ? "Use selected"
-                      : "Open"}
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() =>
-                      beginEdit(index)
-                    }
-                  >
-                    Edit
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="danger"
-                    disabled={
-                      deletingSlug ===
-                      index.slug
-                    }
-                    onClick={() =>
-                      void handleDelete(index)
-                    }
-                  >
-                    {deletingSlug ===
-                    index.slug
-                      ? "Deleting…"
-                      : "Delete"}
+                      ? "Open workspace"
+                      : "Open index →"}
                   </Button>
                 </div>
-              </li>
+              </article>
             );
           })}
-        </ul>
+        </div>
       )}
     </section>
   );

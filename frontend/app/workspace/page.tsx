@@ -312,23 +312,19 @@ export default function WorkspacePage() {
         </div>
       </div>
 
-      <div id="indexes">
-        <IndexManager
-          indexes={indexes}
-          selectedIndex={
-            selectedIndex
-          }
-          onIndexesChange={
-            handleIndexesChange
-          }
-          onSelectIndex={
-            handleSelectIndex
-          }
-          onMethodologyChange={() =>
-            void refreshMethodology()
-          }
-        />
-      </div>
+      <IndexManager
+      indexes={indexes}
+      selectedIndex={selectedIndex}
+      onIndexesChange={
+        handleIndexesChange
+      }
+      onSelectIndex={
+        handleSelectIndex
+      }
+      onMethodologyChange={() =>
+        void refreshMethodology()
+      }
+    />
 
       <IndexWorkspaceShell
         selectedIndex={
