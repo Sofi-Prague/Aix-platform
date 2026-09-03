@@ -2,8 +2,12 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "AIX",
-  description: "AI Index Platform",
+  title: {
+    default: "AIX",
+    template: "%s | AIX",
+  },
+  description:
+    "Academic Index Intelligence Platform",
 };
 
 export default function RootLayout({

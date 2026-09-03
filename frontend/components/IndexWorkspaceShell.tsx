@@ -205,7 +205,7 @@ export function IndexWorkspaceShell({
               Workflow:
             </strong>{" "}
             1. Define → 2. Indicators → 3. Data
-            → 4. Weight → 5. Calculate →
+            → 4. Methodology  → 5. Calculate →
             6. Validate → 7. Publish
           </div>
 

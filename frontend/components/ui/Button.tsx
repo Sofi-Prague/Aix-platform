@@ -1,15 +1,23 @@
 import type { ButtonHTMLAttributes } from "react";
 
-type ButtonVariant = "primary" | "secondary" | "danger";
+export type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "tertiary"
+  | "ghost"
+  | "danger";
 
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: ButtonVariant;
-  isLoading?: boolean;
-};
+type ButtonProps =
+  ButtonHTMLAttributes<HTMLButtonElement> & {
+    variant?: ButtonVariant;
+    isLoading?: boolean;
+    loadingLabel?: string;
+  };
 
 export function Button({
   variant = "primary",
   isLoading = false,
+  loadingLabel = "Please wait…",
   disabled,
   children,
   ...props
@@ -19,9 +27,11 @@ export function Button({
       {...props}
       disabled={disabled || isLoading}
       data-variant={variant}
+      data-loading={isLoading}
+      aria-busy={isLoading}
       className="aix-button"
     >
-      {isLoading ? "Please wait…" : children}
+      {isLoading ? loadingLabel : children}
     </button>
   );
 }

@@ -7,6 +7,8 @@ import { IndexManager } from "../../components/IndexManager";
 import { IndexWorkspaceShell } from "../../components/IndexWorkspaceShell";
 import { Button } from "../../components/ui/Button";
 
+import { AppShell } from "../../components/AppShell";
+
 import {
   getCurrentUser,
   getIndexes,
@@ -287,65 +289,46 @@ export default function WorkspacePage() {
   }
 
   return (
-    <main>
-      <header
-        style={{
-          minHeight: "64px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent:
-            "space-between",
-          flexWrap: "wrap",
-          gap:
-            "var(--aix-space-md)",
-          padding:
-            "var(--aix-space-md) var(--aix-space-lg)",
-          borderBottom:
-            "1px solid var(--aix-color-border)",
-          background:
-            "var(--aix-color-surface)",
-        }}
-      >
+  <AppShell
+    userEmail={user.email}
+    userRole={user.role}
+    onLogout={handleLogout}
+  >
+    <div className="aix-page">
+      <div className="aix-page-header">
         <div>
-          <strong>AIX</strong>
+          <p className="aix-section-label">
+            Research workspace
+          </p>
 
-          <span
-            style={{
-              marginLeft:
-                "var(--aix-space-md)",
-              color:
-                "var(--aix-color-text-muted)",
-            }}
-          >
-            {user.email} ·{" "}
-            {user.role}
-          </span>
+          <h1 className="aix-page-title">
+            AIX Dashboard
+          </h1>
+
+          <p className="aix-page-subtitle">
+            Build, validate and publish
+            evidence-based indices.
+          </p>
         </div>
+      </div>
 
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={handleLogout}
-        >
-          Sign out
-        </Button>
-      </header>
-
-      <IndexManager
-        indexes={indexes}
-        selectedIndex={
-          selectedIndex
-        }
-        onIndexesChange={
-          handleIndexesChange
-        }
-        onSelectIndex={
-          handleSelectIndex
-        }
-        onMethodologyChange={() =>
-          void refreshMethodology()
-        }
-      />
+      <div id="indexes">
+        <IndexManager
+          indexes={indexes}
+          selectedIndex={
+            selectedIndex
+          }
+          onIndexesChange={
+            handleIndexesChange
+          }
+          onSelectIndex={
+            handleSelectIndex
+          }
+          onMethodologyChange={() =>
+            void refreshMethodology()
+          }
+        />
+      </div>
 
       <IndexWorkspaceShell
         selectedIndex={
@@ -373,6 +356,7 @@ export default function WorkspacePage() {
           void handleIndexPublished()
         }
       />
-    </main>
-  );
+    </div>
+  </AppShell>
+);
 }
