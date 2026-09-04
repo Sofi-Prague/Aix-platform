@@ -18,7 +18,6 @@ import {
 } from "../lib/api";
 
 import { Button } from "./ui/Button";
-import { Input } from "./ui/Input";
 import { StatusMessage } from "./ui/StatusMessage";
 
 
@@ -669,48 +668,20 @@ function WeightGroup({
   const valid = totalsMatch(total, 100);
 
   return (
-    <section
-      style={{
-        padding:
-          "var(--aix-space-md)",
-        border:
-          "1px solid var(--aix-color-border)",
-        borderRadius:
-          "var(--aix-radius-sm)",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent:
-            "space-between",
-          alignItems: "baseline",
-          gap: "var(--aix-space-md)",
-          marginBottom:
-            "var(--aix-space-md)",
-        }}
-      >
-        <h4
-          style={{
-            margin: 0,
-          }}
-        >
-          {title}
-        </h4>
+    <section className="weight-group">
+      <header className="weight-group-header">
+        <h4>{title}</h4>
 
-        <strong>
-          Total:{" "}
+        <span
+          className="weight-total"
+          data-valid={valid}
+        >
           {formatPercentage(total)}%
           {valid ? " ✓" : ""}
-        </strong>
-      </div>
+        </span>
+      </header>
 
-      <div
-        style={{
-          display: "grid",
-          gap: "var(--aix-space-sm)",
-        }}
-      >
+      <div className="weight-group-rows">
         {children}
       </div>
     </section>
@@ -730,46 +701,39 @@ function WeightInput({
   onChange: (value: number) => void;
 }) {
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns:
-          "minmax(0, 1fr) 120px",
-        gap: "var(--aix-space-md)",
-        alignItems: "end",
-      }}
-    >
-      <div
-        style={{
-          paddingBottom: "10px",
-        }}
+    <div className="weight-row">
+      <label
+        htmlFor={id}
+        className="weight-row-label"
       >
-        <label htmlFor={id}>
-          {label}
-        </label>
+        {label}
+      </label>
+
+      <div className="weight-row-control">
+        <input
+          id={id}
+          name={id}
+          className="aix-input weight-input"
+          type="number"
+          min="0"
+          max="100"
+          step="0.01"
+          required
+          value={String(value)}
+          onChange={(event) => {
+            const nextValue =
+              Number(event.target.value);
+
+            onChange(
+              Number.isFinite(nextValue)
+                ? nextValue
+                : 0,
+            );
+          }}
+        />
+
+        <span>%</span>
       </div>
-
-      <Input
-        id={id}
-        name={id}
-        label="Weight (%)"
-        type="number"
-        min="0"
-        max="100"
-        step="0.01"
-        required
-        value={String(value)}
-        onChange={(event) => {
-          const nextValue =
-            Number(event.target.value);
-
-          onChange(
-            Number.isFinite(nextValue)
-              ? nextValue
-              : 0,
-          );
-        }}
-      />
     </div>
   );
 }

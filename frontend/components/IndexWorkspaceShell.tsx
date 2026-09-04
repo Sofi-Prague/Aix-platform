@@ -21,14 +21,73 @@ import { WeightingPanel } from "./WeightingPanel";
 import { Button } from "./ui/Button";
 import { StatusMessage } from "./ui/StatusMessage";
 
-
-type MainTab =
-  | "detail"
+type WorkspaceStep =
+  | "define"
+  | "indicators"
   | "data"
-  | "weighting"
-  | "results"
+  | "methodology"
+  | "calculate"
+  | "validate"
   | "publish";
 
+type WorkflowStep = {
+  id: WorkspaceStep;
+  number: string;
+  label: string;
+  description: string;
+};
+
+const WORKFLOW_STEPS: WorkflowStep[] = [
+  {
+    id: "define",
+    number: "01",
+    label: "Define",
+    description:
+      "Review the index purpose and core information.",
+  },
+  {
+    id: "indicators",
+    number: "02",
+    label: "Indicators",
+    description:
+      "Build and review the index structure.",
+  },
+  {
+    id: "data",
+    number: "03",
+    label: "Data",
+    description:
+      "Add and inspect indicator datasets.",
+  },
+  {
+    id: "methodology",
+    number: "04",
+    label: "Methodology",
+    description:
+      "Review normalization and weighting.",
+  },
+  {
+    id: "calculate",
+    number: "05",
+    label: "Calculate",
+    description:
+      "Calculate and inspect ranked results.",
+  },
+  {
+    id: "validate",
+    number: "06",
+    label: "Validate",
+    description:
+      "Review publication readiness.",
+  },
+  {
+    id: "publish",
+    number: "07",
+    label: "Publish",
+    description:
+      "Publish or manage the public index.",
+  },
+];
 
 type IndexWorkspaceShellProps = {
   selectedIndex: IndexRecord | null;
@@ -60,7 +119,6 @@ type IndexWorkspaceShellProps = {
   onIndexPublished: () => void;
 };
 
-
 export function IndexWorkspaceShell({
   selectedIndex,
   selectedDimension,
@@ -72,18 +130,16 @@ export function IndexWorkspaceShell({
   onIndexPublished,
 }: IndexWorkspaceShellProps) {
   const [
-    activeTab,
-    setActiveTab,
-  ] =
-    useState<MainTab>(
-      "detail",
-    );
+    activeStep,
+    setActiveStep,
+  ] = useState<WorkspaceStep>(
+    "define",
+  );
 
   const [
     isAiOpen,
     setIsAiOpen,
   ] = useState(false);
-
 
   const handleSelectDimension =
     useCallback(
@@ -97,16 +153,13 @@ export function IndexWorkspaceShell({
         );
 
         if (dimension) {
-          setActiveTab(
-            "detail",
+          setActiveStep(
+            "indicators",
           );
         }
       },
-      [
-        onSelectDimension,
-      ],
+      [onSelectDimension],
     );
-
 
   const handleSelectIndicator =
     useCallback(
@@ -120,16 +173,24 @@ export function IndexWorkspaceShell({
         );
 
         if (indicator) {
-          setActiveTab(
-            "detail",
+          setActiveStep(
+            "indicators",
           );
         }
       },
-      [
-        onSelectIndicator,
-      ],
+      [onSelectIndicator],
     );
 
+  const activeStepIndex =
+    WORKFLOW_STEPS.findIndex(
+      (step) =>
+        step.id === activeStep,
+    );
+
+  const activeStepInfo =
+    WORKFLOW_STEPS[
+      activeStepIndex
+    ] ?? WORKFLOW_STEPS[0];
 
   return (
     <section
@@ -173,142 +234,163 @@ export function IndexWorkspaceShell({
           />
         </aside>
 
-
         <section
           className="index-workspace-content"
         >
-          <div
-            aria-label="Index workflow"
-            style={{
-              marginBottom:
-                "var(--aix-space-md)",
-              padding:
-                "var(--aix-space-sm) var(--aix-space-md)",
-              border:
-                "1px solid var(--aix-color-border)",
-              borderRadius:
-                "var(--aix-radius-sm)",
-              background:
-                "var(--aix-color-surface)",
-              color:
-                "var(--aix-color-text-muted)",
-              fontSize: "13px",
-              lineHeight: 1.6,
-            }}
+          <header
+            className="index-workspace-header"
           >
-            <strong
-              style={{
-                color:
-                  "var(--aix-color-text)",
-              }}
+            <div
+              className="index-workspace-heading"
             >
-              Workflow:
-            </strong>{" "}
-            1. Define → 2. Indicators → 3. Data
-            → 4. Methodology  → 5. Calculate →
-            6. Validate → 7. Publish
-          </div>
+              <div>
+                <div
+                  className="index-workspace-title-row"
+                >
+                  <h1>
+                    {selectedIndex
+                      ?.name ??
+                      "Index Workspace"}
+                  </h1>
 
-          <nav
-            className="workspace-main-tabs"
-            aria-label="Index workspace views"
-          >
-            <Button
-              type="button"
-              variant={
-                activeTab ===
-                "detail"
-                  ? "primary"
-                  : "secondary"
-              }
-              onClick={() =>
-                setActiveTab(
-                  "detail",
-                )
-              }
+                  {selectedIndex && (
+                    <span
+                      className="aix-badge"
+                      data-status={
+                        selectedIndex
+                          .status ===
+                        "published"
+                          ? "success"
+                          : "warning"
+                      }
+                    >
+                      {selectedIndex
+                        .status ===
+                      "published"
+                        ? "✓ Published"
+                        : "○ Draft"}
+                    </span>
+                  )}
+                </div>
+
+                <p>
+                  {selectedIndex
+                    ?.description ||
+                    "Build, validate and publish this research index."}
+                </p>
+              </div>
+            </div>
+
+            <nav
+              className="aix-workflow-stepper"
+              aria-label="Index research workflow"
             >
-              Detail
-            </Button>
+              {WORKFLOW_STEPS.map(
+                (
+                  step,
+                  index,
+                ) => {
+                  const isActive =
+                    step.id ===
+                    activeStep;
 
+                  const isComplete =
+                    step.id ===
+                    "define"
+                      ? Boolean(
+                          selectedIndex
+                            ?.name &&
+                            selectedIndex
+                              ?.description,
+                        )
+                      : step.id ===
+                          "publish"
+                        ? selectedIndex
+                            ?.status ===
+                          "published"
+                        : false;
 
-            <Button
-              type="button"
-              variant={
-                activeTab ===
-                "data"
-                  ? "primary"
-                  : "secondary"
-              }
-              onClick={() =>
-                setActiveTab(
-                  "data",
-                )
-              }
+                  return (
+                    <button
+                      key={step.id}
+                      type="button"
+                      className="aix-workflow-step"
+                      data-active={
+                        isActive
+                      }
+                      data-complete={
+                        isComplete
+                      }
+                      onClick={() =>
+                        setActiveStep(
+                          step.id,
+                        )
+                      }
+                    >
+                      <span
+                        className="aix-workflow-step-number"
+                      >
+                        {isComplete &&
+                        !isActive
+                          ? "✓"
+                          : step.number}
+                      </span>
+
+                      <span
+                        className="aix-workflow-step-label"
+                      >
+                        {step.label}
+                      </span>
+
+                      {index <
+                        WORKFLOW_STEPS.length -
+                          1 && (
+                        <span
+                          className="aix-workflow-connector"
+                          aria-hidden="true"
+                        />
+                      )}
+                    </button>
+                  );
+                },
+              )}
+            </nav>
+
+            <div
+              className="aix-workflow-context"
             >
-              Data
-            </Button>
+              <strong>
+                Step{" "}
+                {activeStepIndex +
+                  1}{" "}
+                of 7 ·{" "}
+                {
+                  activeStepInfo.label
+                }
+              </strong>
 
-
-            <Button
-              type="button"
-              variant={
-                activeTab ===
-                "weighting"
-                  ? "primary"
-                  : "secondary"
-              }
-              onClick={() =>
-                setActiveTab(
-                  "weighting",
-                )
-              }
-            >
-              Weighting
-            </Button>
-
-
-            <Button
-              type="button"
-              variant={
-                activeTab ===
-                "results"
-                  ? "primary"
-                  : "secondary"
-              }
-              onClick={() =>
-                setActiveTab(
-                  "results",
-                )
-              }
-            >
-              Results
-            </Button>
-
-
-            <Button
-              type="button"
-              variant={
-                activeTab ===
-                "publish"
-                  ? "primary"
-                  : "secondary"
-              }
-              onClick={() =>
-                setActiveTab(
-                  "publish",
-                )
-              }
-            >
-              Publish
-            </Button>
-          </nav>
-
+              <span>
+                {
+                  activeStepInfo.description
+                }
+              </span>
+            </div>
+          </header>
 
           <div
             className="workspace-main-content"
           >
-            {activeTab ===
-              "detail" && (
+            {activeStep ===
+              "define" && (
+              <IndexDefinitionPanel
+                selectedIndex={
+                  selectedIndex
+                }
+              />
+            )}
+
+            {activeStep ===
+              "indicators" && (
               <DetailPanel
                 selectedIndex={
                   selectedIndex
@@ -322,79 +404,158 @@ export function IndexWorkspaceShell({
               />
             )}
 
-
-            {activeTab ===
+            {activeStep ===
               "data" && (
-              <DataPanel
-                selectedIndex={
-                  selectedIndex
-                }
-                selectedDimension={
-                  selectedDimension
-                }
-                selectedIndicator={
-                  selectedIndicator
-                }
-              />
+              <div className="workspace-step workspace-step-data">
+                <DataPanel
+                  selectedIndex={
+                    selectedIndex
+                  }
+                  selectedDimension={
+                    selectedDimension
+                  }
+                  selectedIndicator={
+                    selectedIndicator
+                  }
+                />
+              </div>
             )}
 
-
-            {activeTab ===
-              "weighting" && (
-              <WeightingPanel
-                key={
-                  selectedIndex?.id ??
-                  "no-index"
-                }
-                selectedIndex={
-                  selectedIndex
-                }
-                methodologyVersion={
-                  methodologyVersion
-                }
-                onMethodologyChange={
-                  onMethodologyChange
-                }
-              />
+            {activeStep ===
+              "methodology" && (
+              <div className="workspace-step workspace-step-methodology">
+                <WeightingPanel
+                  key={
+                    selectedIndex
+                      ?.id ??
+                    "no-index"
+                  }
+                  selectedIndex={
+                    selectedIndex
+                  }
+                  methodologyVersion={
+                    methodologyVersion
+                  }
+                  onMethodologyChange={
+                    onMethodologyChange
+                  }
+                />
+              </div>
             )}
 
-
-            {activeTab ===
-              "results" && (
-              <ResultsPanel
-                key={`${
-                  selectedIndex?.id ??
-                  "no-index"
-                }-${methodologyVersion}`}
-                selectedIndex={
-                  selectedIndex
-                }
-              />
+            {activeStep ===
+              "calculate" && (
+              <div className="workspace-step workspace-step-calculate">
+                <ResultsPanel
+                  key={`${
+                    selectedIndex
+                      ?.id ??
+                    "no-index"
+                  }-${methodologyVersion}`}
+                  selectedIndex={
+                    selectedIndex
+                  }
+                />
+              </div>
             )}
 
+            {activeStep ===
+              "validate" && (
+              <div className="workspace-step workspace-step-validate">
+                <PublishPanel
+                  key={`validate-${
+                    selectedIndex
+                      ?.id ??
+                    "no-index"
+                  }`}
+                  selectedIndex={
+                    selectedIndex
+                  }
+                  methodologyVersion={
+                    methodologyVersion
+                  }
+                  onPublished={
+                    onIndexPublished
+                  }
+                  mode="validate"
+                />
+              </div>
+            )}
 
-            {activeTab ===
+            {activeStep ===
               "publish" && (
-              <PublishPanel
-                key={
-                  selectedIndex?.id ??
-                  "no-index"
-                }
-                selectedIndex={
-                  selectedIndex
-                }
-                methodologyVersion={
-                  methodologyVersion
-                }
-                onPublished={
-                  onIndexPublished
-                }
-              />
+              <div className="workspace-step workspace-step-publish">
+                <PublishPanel
+                  key={`publish-${
+                    selectedIndex
+                      ?.id ??
+                    "no-index"
+                  }`}
+                  selectedIndex={
+                    selectedIndex
+                  }
+                  methodologyVersion={
+                    methodologyVersion
+                  }
+                  onPublished={
+                    onIndexPublished
+                  }
+                  mode="publish"
+                />
+              </div>
             )}
           </div>
+
+          <footer className="workspace-step-navigation">
+            <div>
+              {activeStepIndex > 0 && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() =>
+                    setActiveStep(
+                      WORKFLOW_STEPS[
+                        activeStepIndex - 1
+                      ].id,
+                    )
+                  }
+                >
+                  ←{" "}
+                  {
+                    WORKFLOW_STEPS[
+                      activeStepIndex - 1
+                    ].label
+                  }
+                </Button>
+              )}
+            </div>
+
+            <div>
+              {activeStepIndex <
+                WORKFLOW_STEPS.length - 1 && (
+                <Button
+                  type="button"
+                  onClick={() =>
+                    setActiveStep(
+                      WORKFLOW_STEPS[
+                        activeStepIndex + 1
+                      ].id,
+                    )
+                  }
+                >
+                  Continue to{" "}
+                  {
+                    WORKFLOW_STEPS[
+                      activeStepIndex + 1
+                    ].label
+                  }{" "}
+                  →
+                </Button>
+              )}
+            </div>
+          </footer>
         </section>
       </div>
-
 
       <button
         type="button"
@@ -414,7 +575,6 @@ export function IndexWorkspaceShell({
           ? "Close AI"
           : "AI Co-Pilot"}
       </button>
-
 
       <aside
         id="ai-copilot-drawer"
@@ -457,7 +617,6 @@ export function IndexWorkspaceShell({
           </Button>
         </div>
 
-
         <div
           className="ai-drawer-content"
         >
@@ -466,7 +625,8 @@ export function IndexWorkspaceShell({
               selectedIndex?.id ??
               "no-index"
             }-${
-              selectedDimension?.id ??
+              selectedDimension
+                ?.id ??
               "no-dimension"
             }`}
             selectedIndex={
@@ -481,7 +641,6 @@ export function IndexWorkspaceShell({
           />
         </div>
       </aside>
-
 
       {isAiOpen && (
         <button
@@ -499,6 +658,100 @@ export function IndexWorkspaceShell({
   );
 }
 
+function IndexDefinitionPanel({
+  selectedIndex,
+}: {
+  selectedIndex:
+    | IndexRecord
+    | null;
+}) {
+  if (!selectedIndex) {
+    return (
+      <StatusMessage
+        type="empty"
+        title="No index selected"
+        message="Open an index before reviewing its definition."
+      />
+    );
+  }
+
+  return (
+    <section
+      className="index-definition-panel"
+    >
+      <div>
+        <p
+          className="aix-section-label"
+        >
+          Index definition
+        </p>
+
+        <h2>
+          Research index overview
+        </h2>
+
+        <p>
+          Review the core identity
+          and purpose of this index
+          before building its
+          methodology.
+        </p>
+      </div>
+
+      <dl
+        className="index-definition-grid"
+      >
+        <DetailField
+          label="Index name"
+        >
+          {selectedIndex.name}
+        </DetailField>
+
+        <DetailField
+          label="Status"
+        >
+          {selectedIndex.status ===
+          "published"
+            ? "Published"
+            : selectedIndex.status ===
+                "archived"
+              ? "Archived"
+              : "Draft"}
+        </DetailField>
+
+        <DetailField
+          label="URL identifier"
+        >
+          {selectedIndex.slug}
+        </DetailField>
+
+        <DetailField
+          label="Description"
+        >
+          {selectedIndex.description ||
+            "No description has been provided."}
+        </DetailField>
+      </dl>
+
+      <div
+        className="index-definition-note"
+      >
+        <strong>
+          Definition changes
+        </strong>
+
+        <p>
+          Index identity and
+          description are managed
+          from My Indexes.
+          Methodological changes are
+          made through the workflow
+          steps.
+        </p>
+      </div>
+    </section>
+  );
+}
 
 function DetailPanel({
   selectedIndex,
@@ -527,7 +780,6 @@ function DetailPanel({
     );
   }
 
-
   if (selectedIndicator) {
     return (
       <IndicatorDetail
@@ -537,7 +789,6 @@ function DetailPanel({
       />
     );
   }
-
 
   if (selectedDimension) {
     return (
@@ -549,7 +800,6 @@ function DetailPanel({
     );
   }
 
-
   return (
     <StatusMessage
       type="empty"
@@ -558,7 +808,6 @@ function DetailPanel({
     />
   );
 }
-
 
 function DataPanel({
   selectedIndex,
@@ -587,7 +836,6 @@ function DataPanel({
     );
   }
 
-
   if (!selectedDimension) {
     return (
       <StatusMessage
@@ -598,7 +846,6 @@ function DataPanel({
     );
   }
 
-
   if (!selectedIndicator) {
     return (
       <StatusMessage
@@ -608,7 +855,6 @@ function DataPanel({
       />
     );
   }
-
 
   return (
     <DataSourceManager
@@ -627,7 +873,6 @@ function DataPanel({
     />
   );
 }
-
 
 function DimensionDetail({
   dimension,
@@ -659,7 +904,6 @@ function DimensionDetail({
     </div>
   );
 }
-
 
 function IndicatorDetail({
   indicator,
@@ -724,7 +968,6 @@ function IndicatorDetail({
   );
 }
 
-
 function DetailField({
   label,
   children,
@@ -757,7 +1000,6 @@ function DetailField({
     </div>
   );
 }
-
 
 function formatDirectionality(
   directionality:

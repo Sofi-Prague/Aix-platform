@@ -18,12 +18,14 @@ type PublishPanelProps = {
   selectedIndex: IndexRecord | null;
   methodologyVersion: number;
   onPublished: () => void;
+  mode?: "validate" | "publish";
 };
 
 export function PublishPanel({
   selectedIndex,
   methodologyVersion,
   onPublished,
+  mode = "publish",
 }: PublishPanelProps) {
   const router = useRouter();
 
@@ -168,156 +170,107 @@ export function PublishPanel({
     );
   }
 
+  const passedChecks =
+    validation?.checklist.filter(
+      (item) => item.passed,
+    ).length ?? 0;
+
+  const totalChecks =
+    validation?.checklist.length ?? 0;
+
   return (
-    <section aria-label="Publishing">
-      <div
-        style={{
-          marginBottom: "var(--aix-space-lg)",
-        }}
-      >
-        <h3
-          style={{
-            marginBottom: "4px",
-          }}
-        >
-          Publish {selectedIndex.name}
+    <section
+      aria-label={
+        mode === "validate"
+          ? "Publication validation"
+          : "Publishing"
+      }
+      className="publication-panel"
+      data-mode={mode}
+    >
+      <header className="publication-panel-header">
+        <h3>
+          {mode === "validate"
+            ? "Publication validation"
+            : `Publish ${selectedIndex.name}`}
         </h3>
 
-        <p
-          style={{
-            marginTop: 0,
-            color:
-              "var(--aix-color-text-muted)",
-          }}
-        >
-          Review the pre-publish checklist before
-          making this index available.
+        <p>
+          {mode === "validate"
+            ? "Review the publishing requirements and resolve any failed checks before publication."
+            : "Review readiness and publish this index when all requirements are satisfied."}
         </p>
-      </div>
+      </header>
 
       {error && (
-        <div
-          style={{
-            marginBottom:
-              "var(--aix-space-md)",
-          }}
-        >
-          <StatusMessage
-            type="error"
-            title="Publishing error"
-            message={error}
-          />
-        </div>
+        <StatusMessage
+          type="error"
+          title={
+            mode === "validate"
+              ? "Validation error"
+              : "Publishing error"
+          }
+          message={error}
+        />
       )}
 
       {success && (
-        <div
-          style={{
-            marginBottom:
-              "var(--aix-space-md)",
-          }}
-          role="status"
-        >
-          <strong>{success}</strong>
-        </div>
+        <StatusMessage
+          type="success"
+          title={success}
+        />
       )}
 
-      {validation && (
+      {validation && mode === "validate" && (
         <>
-          <div
-            style={{
-              display: "grid",
-              gap: "var(--aix-space-sm)",
-              marginBottom:
-                "var(--aix-space-lg)",
-            }}
-          >
+          <div className="publication-summary-row">
+            <span className="aix-badge" data-status={
+              validation.can_publish
+                ? "success"
+                : "warning"
+            }>
+              {passedChecks} of {totalChecks} checks passed
+            </span>
+
+            <span className="publication-status-copy">
+              {validation.can_publish
+                ? "Ready for publication"
+                : "Action required"}
+            </span>
+          </div>
+
+          <div className="publication-checklist">
             {validation.checklist.map(
               (item) => (
                 <article
                   key={item.key}
-                  style={{
-                    padding:
-                      "var(--aix-space-md)",
-                    border:
-                      "1px solid var(--aix-color-border)",
-                    borderRadius:
-                      "var(--aix-radius-sm)",
-                    background:
-                      "var(--aix-color-surface)",
-                  }}
+                  className="publication-check"
+                  data-passed={item.passed}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap:
-                        "var(--aix-space-sm)",
-                    }}
+                  <span
+                    className="publication-check-icon"
+                    aria-hidden="true"
                   >
-                    <span
-                      aria-hidden="true"
-                      style={{
-                        fontWeight: 700,
-                      }}
-                    >
-                      {item.passed ? "✓" : "✕"}
-                    </span>
+                    {item.passed ? "✓" : "✕"}
+                  </span>
 
-                    <div>
-                      <strong>
-                        {item.label}
-                      </strong>
+                  <div>
+                    <strong>
+                      {item.label}
+                    </strong>
 
-                      {item.detail && (
-                        <p
-                          style={{
-                            marginBottom: 0,
-                            color:
-                              "var(--aix-color-text-muted)",
-                            fontSize: "13px",
-                          }}
-                        >
-                          {item.detail}
-                        </p>
-                      )}
-                    </div>
+                    {item.detail && (
+                      <p>
+                        {item.detail}
+                      </p>
+                    )}
                   </div>
                 </article>
               ),
             )}
           </div>
 
-          {validation.current_status ===
-          "published" ? (
-            <StatusMessage
-              type="empty"
-              title="Already published"
-              message="This index has already been published."
-            />
-          ) : validation.can_publish ? (
-            <StatusMessage
-              type="empty"
-              title="Ready to publish"
-              message="All current publishing requirements have been satisfied."
-            />
-          ) : (
-            <StatusMessage
-              type="empty"
-              title="Not ready to publish"
-              message="Complete the failed checklist items before publishing."
-            />
-          )}
-
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "var(--aix-space-sm)",
-              marginTop:
-                "var(--aix-space-lg)",
-            }}
-          >
+          <div className="publication-panel-actions">
             <Button
               type="button"
               variant="secondary"
@@ -330,40 +283,108 @@ export function PublishPanel({
               }
               isLoading={isLoading}
             >
-              Recheck
+              Recheck validation
             </Button>
+          </div>
+        </>
+      )}
 
-            <Button
-              type="button"
-              onClick={() =>
-                void handlePublish()
-              }
-              disabled={
-                !validation.can_publish ||
+      {validation && mode === "publish" && (
+        <>
+          <div className="publication-readiness-card">
+            <div>
+              <span className="aix-section-label">
+                Readiness
+              </span>
+
+              <h4>
+                {validation.current_status ===
+                "published"
+                  ? "Published"
+                  : validation.can_publish
+                    ? "Ready to publish"
+                    : "Not ready to publish"}
+              </h4>
+
+              <p>
+                {validation.current_status ===
+                "published"
+                  ? "This index is currently publicly available."
+                  : validation.can_publish
+                    ? `${passedChecks} of ${totalChecks} validation checks passed. The index can be published.`
+                    : `${passedChecks} of ${totalChecks} validation checks passed. Return to Validate to review failed requirements.`}
+              </p>
+            </div>
+
+            <span
+              className="aix-badge"
+              data-status={
                 validation.current_status ===
-                  "published" ||
-                isLoading ||
-                isPublishing
+                "published" ||
+                validation.can_publish
+                  ? "success"
+                  : "warning"
               }
-              isLoading={isPublishing}
             >
-              Publish index
-            </Button>
-            {validation.current_status === "published" && (
+              {validation.current_status ===
+              "published"
+                ? "✓ Published"
+                : validation.can_publish
+                  ? "✓ Ready"
+                  : "○ Blocked"}
+            </span>
+          </div>
+
+          <div className="publication-panel-actions">
+            {validation.current_status !==
+              "published" && (
+              <Button
+                type="button"
+                onClick={() =>
+                  void handlePublish()
+                }
+                disabled={
+                  !validation.can_publish ||
+                  isLoading ||
+                  isPublishing
+                }
+                isLoading={isPublishing}
+              >
+                Publish index
+              </Button>
+            )}
+
             <Button
               type="button"
               variant="secondary"
               onClick={() =>
-                router.push(
-                  `/published/${encodeURIComponent(
-                    selectedIndex.slug,
-                  )}`,
-                )
+                void loadValidation()
               }
+              disabled={
+                isLoading ||
+                isPublishing
+              }
+              isLoading={isLoading}
             >
-              View published index
+              Refresh readiness
             </Button>
-          )}
+
+            {validation.current_status ===
+              "published" && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() =>
+                  router.push(
+                    `/published/${encodeURIComponent(
+                      selectedIndex.slug,
+                    )}`,
+                  )
+                }
+              >
+                View published index
+              </Button>
+            )}
           </div>
         </>
       )}

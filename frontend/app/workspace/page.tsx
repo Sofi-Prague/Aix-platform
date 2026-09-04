@@ -294,65 +294,81 @@ export default function WorkspacePage() {
     userRole={user.role}
     onLogout={handleLogout}
   >
-    <div className="aix-page">
-      <div className="aix-page-header">
-        <div>
-          <p className="aix-section-label">
-            Research workspace
-          </p>
+  <div className="aix-page">
+    {!selectedIndex ? (
+      <>
+        <div className="aix-page-header">
+          <div>
+            <p className="aix-section-label">
+              Research workspace
+            </p>
 
-          <h1 className="aix-page-title">
-            AIX Dashboard
-          </h1>
+            <h1 className="aix-page-title">
+              AIX Dashboard
+            </h1>
 
-          <p className="aix-page-subtitle">
-            Build, validate and publish
-            evidence-based indices.
-          </p>
+            <p className="aix-page-subtitle">
+              Build, validate and publish
+              evidence-based indices.
+            </p>
+          </div>
         </div>
-      </div>
 
-      <IndexManager
-      indexes={indexes}
-      selectedIndex={selectedIndex}
-      onIndexesChange={
-        handleIndexesChange
-      }
-      onSelectIndex={
-        handleSelectIndex
-      }
-      onMethodologyChange={() =>
-        void refreshMethodology()
-      }
-    />
+        <IndexManager
+          indexes={indexes}
+          selectedIndex={selectedIndex}
+          onIndexesChange={
+            handleIndexesChange
+          }
+          onSelectIndex={
+            handleSelectIndex
+          }
+          onMethodologyChange={() =>
+            void refreshMethodology()
+          }
+        />
+      </>
+    ) : (
+      <>
+        <div className="workspace-page-toolbar">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() =>
+              handleSelectIndex(null)
+            }
+          >
+            ← My Indexes
+          </Button>
+        </div>
 
-      <IndexWorkspaceShell
-        selectedIndex={
-          selectedIndex
-        }
-        selectedDimension={
-          selectedDimension
-        }
-        selectedIndicator={
-          selectedIndicator
-        }
-        methodologyVersion={
-          methodologyVersion
-        }
-        onSelectDimension={
-          handleSelectDimension
-        }
-        onSelectIndicator={
-          setSelectedIndicator
-        }
-        onMethodologyChange={() =>
-          void refreshMethodology()
-        }
-        onIndexPublished={() =>
-          void handleIndexPublished()
-        }
-      />
-    </div>
+        <IndexWorkspaceShell
+          selectedIndex={selectedIndex}
+          selectedDimension={
+            selectedDimension
+          }
+          selectedIndicator={
+            selectedIndicator
+          }
+          methodologyVersion={
+            methodologyVersion
+          }
+          onSelectDimension={
+            handleSelectDimension
+          }
+          onSelectIndicator={
+            setSelectedIndicator
+          }
+          onMethodologyChange={() =>
+            void refreshMethodology()
+          }
+          onIndexPublished={() =>
+            void handleIndexPublished()
+          }
+        />
+      </>
+    )}
+   </div>
   </AppShell>
 );
 }
