@@ -141,45 +141,33 @@ export function IndexWorkspaceShell({
     setIsAiOpen,
   ] = useState(false);
 
-  const handleSelectDimension =
-    useCallback(
-      (
-        dimension:
-          | DimensionRecord
-          | null,
-      ): void => {
-        onSelectDimension(
-          dimension,
-        );
+ const handleSelectDimension =
+  useCallback(
+    (
+      dimension:
+        | DimensionRecord
+        | null,
+    ): void => {
+      onSelectDimension(
+        dimension,
+      );
+    },
+    [onSelectDimension],
+  );
 
-        if (dimension) {
-          setActiveStep(
-            "indicators",
-          );
-        }
-      },
-      [onSelectDimension],
-    );
-
-  const handleSelectIndicator =
-    useCallback(
-      (
-        indicator:
-          | IndicatorRecord
-          | null,
-      ): void => {
-        onSelectIndicator(
-          indicator,
-        );
-
-        if (indicator) {
-          setActiveStep(
-            "indicators",
-          );
-        }
-      },
-      [onSelectIndicator],
-    );
+const handleSelectIndicator =
+  useCallback(
+    (
+      indicator:
+        | IndicatorRecord
+        | null,
+    ): void => {
+      onSelectIndicator(
+        indicator,
+      );
+    },
+    [onSelectIndicator],
+  );
 
   const activeStepIndex =
     WORKFLOW_STEPS.findIndex(

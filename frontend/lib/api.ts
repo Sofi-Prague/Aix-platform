@@ -1,4 +1,5 @@
 import { getAccessToken } from "./auth";
+import { removeAccessToken } from "./auth";
 
 const API_URL = (
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
@@ -207,19 +208,29 @@ async function request<T>(
     headers,
   });
 
-  if (!response.ok) {
-    let message = `Request failed with status ${response.status}`;
+ if (!response.ok) {
+    let message = "Request failed.";
 
     try {
-      const body = (await response.json()) as {
-        detail?: string;
-      };
-
-      if (body.detail) {
-        message = body.detail;
-      }
+      const payload = await response.json();
+      message =
+        payload.detail ??
+        payload.message ??
+        message;
     } catch {
-      // Keep the fallback message when the response is not JSON.
+      // Ignore parse errors.
+    }
+
+    if (response.status === 401) {
+      removeAccessToken();
+
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
+
+      throw new Error(
+        "Your session has expired. Please sign in again.",
+      );
     }
 
     throw new Error(message);
