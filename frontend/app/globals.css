@@ -3066,3 +3066,112 @@ p {
     font-size: 12px;
   }
 }
+
+/* ---------------------------------------------------------
+   Indicator sidebar overflow fix
+--------------------------------------------------------- */
+
+.dimension-indicators,
+.indicator-manager,
+.indicator-list,
+.indicator-row {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.indicator-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.indicator-list > li {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.indicator-list > li::marker {
+  content: "";
+}
+
+.indicator-row {
+  display: block;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.indicator-row-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+
+  width: 100%;
+  min-width: 0;
+
+  padding: 10px 12px;
+
+  border: 0;
+  background: transparent;
+
+  text-align: left;
+}
+
+.indicator-row-title,
+.indicator-row-meta,
+.indicator-row-direction {
+  display: block;
+
+  width: 100%;
+  min-width: 0;
+
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.indicator-row-title {
+  margin-bottom: 3px;
+
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.indicator-row-meta {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.indicator-row-direction {
+  margin-top: 2px;
+
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.indicator-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+
+  gap: 12px;
+
+  width: 100%;
+  min-width: 0;
+
+  padding: 6px 10px 8px;
+
+  border-top:
+    1px solid var(--aix-color-border);
+}
+
+.indicator-row-actions .aix-button {
+  width: auto;
+  min-width: 0;
+  min-height: 28px;
+
+  padding: 4px 7px;
+
+  font-size: 11px;
+}
