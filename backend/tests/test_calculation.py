@@ -528,6 +528,256 @@ def test_missing_weighting_is_rejected(
     )
 
 
+
+def save_zero_weight_dimension_config(
+    index: Index,
+    dimensions: list[Dimension],
+    indicators: list[Indicator],
+) -> None:
+    db = SessionLocal()
+
+    try:
+        db.add(
+            WeightingConfig(
+                index_id=index.id,
+                method="custom",
+                config={
+                    "dimension_weights": {
+                        str(dimensions[0].id): 1.0,
+                        str(dimensions[1].id): 0.0,
+                    },
+                    "indicator_weights": {
+                        str(indicators[0].id): 1.0,
+                        str(indicators[1].id): 0.0,
+                        str(indicators[2].id): 0.0,
+                        str(indicators[3].id): 0.0,
+                    },
+                },
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+
+def test_zero_weight_dimension_without_indicators_is_allowed(
+    client: TestClient,
+    temporary_user: dict,
+    auth_headers: dict[str, str],
+):
+    index, dimensions, indicators = create_calculation_index(
+        temporary_user
+    )
+
+    # Only the positively weighted GDP indicator contributes and therefore
+    # needs data.
+    add_indicator_data(
+        indicators[0],
+        [
+            ("A", "2025", 100),
+            ("B", "2025", 200),
+        ],
+    )
+
+    db = SessionLocal()
+    try:
+        # Reproduce the acceptance-test case: the second dimension is present
+        # but has no indicators at all.
+        for indicator in indicators[2:]:
+            db.query(DataPoint).filter(
+                DataPoint.indicator_id == indicator.id
+            ).delete(synchronize_session=False)
+            db.query(DataSource).filter(
+                DataSource.indicator_id == indicator.id
+            ).delete(synchronize_session=False)
+            db.delete(
+                db.get(Indicator, indicator.id)
+            )
+        db.commit()
+    finally:
+        db.close()
+
+    save_zero_weight_dimension_config(
+        index,
+        dimensions,
+        indicators,
+    )
+
+    response = client.get(
+        calculation_url(index),
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200, response.text
+
+    body = response.json()
+    results = body["periods"][0]["results"]
+
+    assert len(results) == 2
+    assert all(
+        len(result["dimensions"]) == 1
+        for result in results
+    )
+    assert all(
+        result["dimensions"][0]["dimension_name"]
+        == "Economy"
+        for result in results
+    )
+
+
+def test_positive_weight_dimension_without_indicators_is_rejected(
+    client: TestClient,
+    temporary_user: dict,
+    auth_headers: dict[str, str],
+):
+    index, dimensions, indicators = create_calculation_index(
+        temporary_user
+    )
+
+    add_indicator_data(
+        indicators[0],
+        [
+            ("A", "2025", 100),
+            ("B", "2025", 200),
+        ],
+    )
+
+    db = SessionLocal()
+    try:
+        for indicator in indicators[2:]:
+            db.query(DataPoint).filter(
+                DataPoint.indicator_id == indicator.id
+            ).delete(synchronize_session=False)
+            db.query(DataSource).filter(
+                DataSource.indicator_id == indicator.id
+            ).delete(synchronize_session=False)
+            db.delete(
+                db.get(Indicator, indicator.id)
+            )
+
+        db.add(
+            WeightingConfig(
+                index_id=index.id,
+                method="custom",
+                config={
+                    "dimension_weights": {
+                        str(dimensions[0].id): 0.5,
+                        str(dimensions[1].id): 0.5,
+                    },
+                    "indicator_weights": {
+                        str(indicators[0].id): 1.0,
+                        str(indicators[1].id): 0.0,
+                    },
+                },
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.get(
+        calculation_url(index),
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 400
+    assert (
+        "Dimension 'Health' has no indicators."
+        in response.json()["detail"]
+    )
+
+
+def test_zero_weight_indicator_without_data_is_allowed(
+    client: TestClient,
+    temporary_user: dict,
+    auth_headers: dict[str, str],
+):
+    index, dimensions, indicators = create_calculation_index(
+        temporary_user
+    )
+
+    # GDP is the only positively weighted indicator. Unemployment remains in
+    # the contributing dimension but has weight 0 and intentionally has no data.
+    add_indicator_data(
+        indicators[0],
+        [
+            ("A", "2025", 100),
+            ("B", "2025", 200),
+        ],
+    )
+
+    save_zero_weight_dimension_config(
+        index,
+        dimensions,
+        indicators,
+    )
+
+    response = client.get(
+        calculation_url(index),
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200, response.text
+
+    results = response.json()["periods"][0]["results"]
+    economy = results[0]["dimensions"][0]
+
+    assert len(economy["indicators"]) == 1
+    assert economy["indicators"][0]["indicator_name"] == "GDP"
+
+
+def test_positive_weight_indicator_without_data_is_rejected(
+    client: TestClient,
+    temporary_user: dict,
+    auth_headers: dict[str, str],
+):
+    index, dimensions, indicators = create_calculation_index(
+        temporary_user
+    )
+
+    add_indicator_data(
+        indicators[0],
+        [
+            ("A", "2025", 100),
+            ("B", "2025", 200),
+        ],
+    )
+
+    db = SessionLocal()
+    try:
+        db.add(
+            WeightingConfig(
+                index_id=index.id,
+                method="custom",
+                config={
+                    "dimension_weights": {
+                        str(dimensions[0].id): 1.0,
+                        str(dimensions[1].id): 0.0,
+                    },
+                    "indicator_weights": {
+                        str(indicators[0].id): 0.5,
+                        str(indicators[1].id): 0.5,
+                        str(indicators[2].id): 0.0,
+                        str(indicators[3].id): 0.0,
+                    },
+                },
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.get(
+        calculation_url(index),
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 400
+    assert (
+        "Indicator 'Unemployment' has no data."
+        in response.json()["detail"]
+    )
+
 def test_other_tenant_cannot_calculate_index(
     client: TestClient,
     temporary_user: dict,

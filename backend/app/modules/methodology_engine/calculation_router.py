@@ -434,18 +434,6 @@ def calculate_index_record(
             .all()
         )
 
-        if not indicators:
-            raise HTTPException(
-                status_code=(
-                    status.HTTP_400_BAD_REQUEST
-                ),
-                detail=(
-                    f"Dimension "
-                    f"'{dimension.name}' "
-                    "has no indicators."
-                ),
-            )
-
         indicators_by_dimension[
             dimension.id
         ] = indicators
@@ -464,6 +452,59 @@ def calculate_index_record(
         indicators_by_dimension,
         db,
     )
+
+    contributing_indicators: list[
+        Indicator
+    ] = []
+
+    for dimension in dimensions:
+        dimension_weight = (
+            dimension_weights[
+                dimension.id
+            ]
+        )
+
+        if dimension_weight <= 0.0:
+            continue
+
+        indicators = (
+            indicators_by_dimension[
+                dimension.id
+            ]
+        )
+
+        if not indicators:
+            raise HTTPException(
+                status_code=(
+                    status.HTTP_400_BAD_REQUEST
+                ),
+                detail=(
+                    f"Dimension "
+                    f"'{dimension.name}' "
+                    "has no indicators."
+                ),
+            )
+
+        for indicator in indicators:
+            indicator_weight = (
+                indicator_weights[
+                    indicator.id
+                ]
+            )
+
+            if indicator_weight > 0.0:
+                contributing_indicators.append(
+                    indicator
+                )
+
+    if not contributing_indicators:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Index has no positively weighted "
+                "indicators to calculate."
+            ),
+        )
 
     raw_by_indicator: dict[
         uuid.UUID,
@@ -484,7 +525,7 @@ def calculate_index_record(
         tuple[str, str]
     ] | None = None
 
-    for indicator in all_indicators:
+    for indicator in contributing_indicators:
         (
             raw_values,
             normalized_values,
@@ -545,7 +586,7 @@ def calculate_index_record(
     ] = defaultdict(list)
 
     first_indicator = (
-        all_indicators[0]
+        contributing_indicators[0]
     )
 
     for key in sorted(
@@ -570,6 +611,15 @@ def calculate_index_record(
         index_score = 0.0
 
         for dimension in dimensions:
+            dimension_weight = (
+                dimension_weights[
+                    dimension.id
+                ]
+            )
+
+            if dimension_weight <= 0.0:
+                continue
+
             dimension_score = 0.0
 
             indicator_results: list[
@@ -581,6 +631,15 @@ def calculate_index_record(
                     dimension.id
                 ]
             ):
+                indicator_weight = (
+                    indicator_weights[
+                        indicator.id
+                    ]
+                )
+
+                if indicator_weight <= 0.0:
+                    continue
+
                 normalized = (
                     normalized_by_indicator[
                         indicator.id
@@ -591,12 +650,6 @@ def calculate_index_record(
                     raw_by_indicator[
                         indicator.id
                     ][key]
-                )
-
-                indicator_weight = (
-                    indicator_weights[
-                        indicator.id
-                    ]
                 )
 
                 weighted_indicator = (
@@ -633,12 +686,6 @@ def calculate_index_record(
                         ),
                     )
                 )
-
-            dimension_weight = (
-                dimension_weights[
-                    dimension.id
-                ]
-            )
 
             weighted_dimension = (
                 dimension_score
