@@ -236,6 +236,66 @@ def build_publish_checklist(
             dimension_indicators
         )
 
+    # Resolve weighting before structural/data validation so publication
+    # uses the same contributing-component semantics as calculation.
+    weighting = (
+        db.query(WeightingConfig)
+        .filter(
+            WeightingConfig.index_id
+            == index.id
+        )
+        .order_by(
+            WeightingConfig.created_at.desc()
+        )
+        .first()
+    )
+
+    has_weighting = weighting is not None
+
+    if weighting is not None and weighting.method == "custom":
+        custom_dimension_weights = weighting.config.get(
+            "dimension_weights",
+            {},
+        )
+        custom_indicator_weights = weighting.config.get(
+            "indicator_weights",
+            {},
+        )
+
+        contributing_dimensions = [
+            dimension
+            for dimension in dimensions
+            if float(
+                custom_dimension_weights.get(
+                    str(dimension.id),
+                    0.0,
+                )
+            ) > 0.0
+        ]
+
+        contributing_dimension_ids = {
+            dimension.id
+            for dimension in contributing_dimensions
+        }
+
+        contributing_indicators = [
+            indicator
+            for dimension in dimensions
+            if dimension.id in contributing_dimension_ids
+            for indicator in indicators_by_dimension[dimension.id]
+            if float(
+                custom_indicator_weights.get(
+                    str(indicator.id),
+                    0.0,
+                )
+            ) > 0.0
+        ]
+    else:
+        # Equal weighting (and the pre-weighting checklist state) preserves
+        # the existing behaviour: every configured component contributes.
+        contributing_dimensions = dimensions
+        contributing_indicators = indicators
+
     checklist: list[
         PublishChecklistItem
     ] = []
@@ -321,7 +381,7 @@ def build_publish_checklist(
 
     empty_dimensions = [
         dimension.name
-        for dimension in dimensions
+        for dimension in contributing_dimensions
         if not indicators_by_dimension[
             dimension.id
         ]
@@ -329,6 +389,7 @@ def build_publish_checklist(
 
     dimensions_have_indicators = (
         has_dimensions
+        and bool(contributing_dimensions)
         and not empty_dimensions
     )
 
@@ -371,7 +432,7 @@ def build_publish_checklist(
     # --------------------------------------------------------------
 
     has_indicators = (
-        len(indicators) > 0
+        len(contributing_indicators) > 0
     )
 
     checklist.append(
@@ -395,7 +456,7 @@ def build_publish_checklist(
 
     incomplete_descriptions = [
         indicator.name
-        for indicator in indicators
+        for indicator in contributing_indicators
         if not (
             indicator.description
             and
@@ -442,7 +503,7 @@ def build_publish_checklist(
 
     missing_units = [
         indicator.name
-        for indicator in indicators
+        for indicator in contributing_indicators
         if not (
             indicator.unit
             and
@@ -486,7 +547,7 @@ def build_publish_checklist(
 
     invalid_directionality = [
         indicator.name
-        for indicator in indicators
+        for indicator in contributing_indicators
         if indicator.directionality not in (
             "higher_is_better",
             "lower_is_better",
@@ -535,7 +596,7 @@ def build_publish_checklist(
 
     not_ready = [
         indicator.name
-        for indicator in indicators
+        for indicator in contributing_indicators
         if indicator.status != "ready"
     ]
 
@@ -591,7 +652,7 @@ def build_publish_checklist(
         str
     ] = []
 
-    for indicator in indicators:
+    for indicator in contributing_indicators:
         (
             coverage,
             has_duplicates,
@@ -703,7 +764,7 @@ def build_publish_checklist(
             coverage_by_indicator[
                 indicator.id
             ]
-            for indicator in indicators
+            for indicator in contributing_indicators
         ]
 
         reference_coverage = (
@@ -752,22 +813,6 @@ def build_publish_checklist(
     # --------------------------------------------------------------
     # Weighting
     # --------------------------------------------------------------
-
-    weighting = (
-        db.query(WeightingConfig)
-        .filter(
-            WeightingConfig.index_id
-            == index.id
-        )
-        .order_by(
-            WeightingConfig.created_at.desc()
-        )
-        .first()
-    )
-
-    has_weighting = (
-        weighting is not None
-    )
 
     checklist.append(
         PublishChecklistItem(

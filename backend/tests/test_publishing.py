@@ -70,13 +70,14 @@ def create_test_dimension(
 def create_ready_indicator(
     *,
     dimension_id: str,
+    name: str = "GDP Growth",
 ) -> Indicator:
     db = SessionLocal()
 
     try:
         indicator = Indicator(
             dimension_id=uuid.UUID(dimension_id),
-            name="GDP Growth",
+            name=name,
             description="Annual real GDP growth.",
             unit="%",
             directionality="higher_is_better",
@@ -142,6 +143,72 @@ def make_index_publishable(
         db.commit()
     finally:
         db.close()
+
+
+def save_custom_weighting(
+    *,
+    index: Index,
+    dimension_weights: dict[str, float],
+    indicator_weights: dict[str, float],
+) -> None:
+    db = SessionLocal()
+
+    try:
+        db.add(
+            WeightingConfig(
+                index_id=index.id,
+                method="custom",
+                config={
+                    "dimension_weights": dimension_weights,
+                    "indicator_weights": indicator_weights,
+                },
+            )
+        )
+        db.commit()
+    finally:
+        db.close()
+
+
+def add_indicator_data(
+    *,
+    indicator: Indicator,
+    entities: tuple[str, str] = ("Entity A", "Entity B"),
+) -> None:
+    db = SessionLocal()
+
+    try:
+        source = DataSource(
+            indicator_id=indicator.id,
+            name=f"Data for {indicator.name}",
+            source_type="csv",
+            original_filename="custom-weighting-test.csv",
+        )
+        db.add(source)
+        db.flush()
+
+        db.add_all([
+            DataPoint(
+                data_source_id=source.id,
+                indicator_id=indicator.id,
+                entity=entities[0],
+                period="2025",
+                value=10.0,
+            ),
+            DataPoint(
+                data_source_id=source.id,
+                indicator_id=indicator.id,
+                entity=entities[1],
+                period="2025",
+                value=20.0,
+            ),
+        ])
+        db.commit()
+    finally:
+        db.close()
+
+
+def checklist_by_key(body: dict) -> dict[str, dict]:
+    return {item["key"]: item for item in body["checklist"]}
 
 
 def test_publish_ping_is_public(
@@ -489,3 +556,198 @@ def test_public_endpoint_returns_404_for_unknown_index(
     assert response.json() == {
         "detail": "Published index not found"
     }
+
+def test_zero_weight_dimension_without_indicators_can_validate_and_publish(
+    client: TestClient,
+    temporary_user: dict,
+    auth_headers: dict[str, str],
+):
+    slug = f"publish-zero-dimension-{uuid.uuid4()}"
+    index = create_test_index(
+        tenant_id=temporary_user["tenant_id"],
+        created_by=temporary_user["id"],
+        slug=slug,
+    )
+    contributing_dimension = create_test_dimension(
+        index_id=str(index.id),
+        name="Political Stability",
+    )
+    excluded_dimension = create_test_dimension(
+        index_id=str(index.id),
+        name="Security Threats",
+    )
+    indicator = create_ready_indicator(
+        dimension_id=str(contributing_dimension.id),
+        name="Political Stability Score",
+    )
+    add_indicator_data(indicator=indicator)
+    save_custom_weighting(
+        index=index,
+        dimension_weights={
+            str(contributing_dimension.id): 1.0,
+            str(excluded_dimension.id): 0.0,
+        },
+        indicator_weights={str(indicator.id): 1.0},
+    )
+
+    response = client.get(
+        f"/publish/indexes/{slug}/validate",
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    body = response.json()
+    checks = checklist_by_key(body)
+    assert body["can_publish"] is True
+    assert checks["dimensions_have_indicators"]["passed"] is True
+    assert checks["calculation"]["passed"] is True
+
+    publish_response = client.post(
+        f"/publish/indexes/{slug}",
+        headers=auth_headers,
+    )
+    assert publish_response.status_code == 200
+    assert publish_response.json()["status"] == "published"
+
+
+def test_positive_weight_dimension_without_indicators_fails_validation(
+    client: TestClient,
+    temporary_user: dict,
+    auth_headers: dict[str, str],
+):
+    slug = f"publish-positive-empty-dimension-{uuid.uuid4()}"
+    index = create_test_index(
+        tenant_id=temporary_user["tenant_id"],
+        created_by=temporary_user["id"],
+        slug=slug,
+    )
+    dimension = create_test_dimension(index_id=str(index.id))
+    save_custom_weighting(
+        index=index,
+        dimension_weights={str(dimension.id): 1.0},
+        indicator_weights={},
+    )
+
+    response = client.get(
+        f"/publish/indexes/{slug}/validate",
+        headers=auth_headers,
+    )
+    checks = checklist_by_key(response.json())
+    assert checks["dimensions_have_indicators"]["passed"] is False
+    assert response.json()["can_publish"] is False
+
+
+def test_zero_weight_indicator_without_data_is_excluded_from_validation(
+    client: TestClient,
+    temporary_user: dict,
+    auth_headers: dict[str, str],
+):
+    slug = f"publish-zero-indicator-{uuid.uuid4()}"
+    index = create_test_index(
+        tenant_id=temporary_user["tenant_id"],
+        created_by=temporary_user["id"],
+        slug=slug,
+    )
+    dimension = create_test_dimension(index_id=str(index.id))
+    contributing = create_ready_indicator(
+        dimension_id=str(dimension.id),
+        name="Political Stability Score",
+    )
+    excluded = create_ready_indicator(
+        dimension_id=str(dimension.id),
+        name="Unused Indicator",
+    )
+    add_indicator_data(indicator=contributing)
+    save_custom_weighting(
+        index=index,
+        dimension_weights={str(dimension.id): 1.0},
+        indicator_weights={
+            str(contributing.id): 1.0,
+            str(excluded.id): 0.0,
+        },
+    )
+
+    response = client.get(
+        f"/publish/indexes/{slug}/validate",
+        headers=auth_headers,
+    )
+    body = response.json()
+    checks = checklist_by_key(body)
+    assert checks["indicator_data"]["passed"] is True
+    assert checks["data_coverage"]["passed"] is True
+    assert checks["calculation"]["passed"] is True
+    assert body["can_publish"] is True
+
+
+def test_positive_weight_indicator_without_data_fails_validation(
+    client: TestClient,
+    temporary_user: dict,
+    auth_headers: dict[str, str],
+):
+    slug = f"publish-positive-indicator-no-data-{uuid.uuid4()}"
+    index = create_test_index(
+        tenant_id=temporary_user["tenant_id"],
+        created_by=temporary_user["id"],
+        slug=slug,
+    )
+    dimension = create_test_dimension(index_id=str(index.id))
+    indicator = create_ready_indicator(dimension_id=str(dimension.id))
+    save_custom_weighting(
+        index=index,
+        dimension_weights={str(dimension.id): 1.0},
+        indicator_weights={str(indicator.id): 1.0},
+    )
+
+    response = client.get(
+        f"/publish/indexes/{slug}/validate",
+        headers=auth_headers,
+    )
+    body = response.json()
+    checks = checklist_by_key(body)
+    assert checks["indicator_data"]["passed"] is False
+    assert checks["calculation"]["passed"] is False
+    assert body["can_publish"] is False
+
+
+def test_zero_weight_indicator_does_not_affect_coverage_validation(
+    client: TestClient,
+    temporary_user: dict,
+    auth_headers: dict[str, str],
+):
+    slug = f"publish-zero-indicator-coverage-{uuid.uuid4()}"
+    index = create_test_index(
+        tenant_id=temporary_user["tenant_id"],
+        created_by=temporary_user["id"],
+        slug=slug,
+    )
+    dimension = create_test_dimension(index_id=str(index.id))
+    contributing = create_ready_indicator(
+        dimension_id=str(dimension.id),
+        name="Contributing Indicator",
+    )
+    excluded = create_ready_indicator(
+        dimension_id=str(dimension.id),
+        name="Excluded Indicator",
+    )
+    add_indicator_data(indicator=contributing)
+    add_indicator_data(
+        indicator=excluded,
+        entities=("Different A", "Different B"),
+    )
+    save_custom_weighting(
+        index=index,
+        dimension_weights={str(dimension.id): 1.0},
+        indicator_weights={
+            str(contributing.id): 1.0,
+            str(excluded.id): 0.0,
+        },
+    )
+
+    response = client.get(
+        f"/publish/indexes/{slug}/validate",
+        headers=auth_headers,
+    )
+    body = response.json()
+    checks = checklist_by_key(body)
+    assert checks["data_coverage"]["passed"] is True
+    assert checks["calculation"]["passed"] is True
+    assert body["can_publish"] is True
