@@ -135,8 +135,8 @@ export function AppShell({
                 Intelligence
               </strong>
 
-              <span>
-                Research platform
+              <span className="aix-brand-affiliation">
+                LAC Center · AAU
               </span>
             </div>
           )}
@@ -230,11 +230,12 @@ export function AppShell({
           {!isCollapsed && (
             <>
               <span>
-                Your organization
+                Institutional affiliation
               </span>
 
-              <strong>
-                Anglo-American University
+              <strong className="aix-sidebar-affiliation-full">
+                <span>LAC Center</span>
+                <span>Anglo-American University</span>
               </strong>
             </>
           )}
@@ -242,7 +243,7 @@ export function AppShell({
           {isCollapsed && (
             <span
               className="aix-sidebar-org-mark"
-              title="Anglo-American University"
+              title="LAC Center · Anglo-American University"
             >
               AAU
             </span>
